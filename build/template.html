@@ -1,0 +1,1669 @@
+<title>Атлас масштабов жизни</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Интерактивная шкала размеров живого: от атома водорода до гигантской грибницы. Атомы, аминокислоты, белки, вирусы, клетки и организмы с 3D-моделями и фотографиями.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Oranienbaum&display=swap">
+<style>
+/* Layout: one full-bleed microscope stage (canvas) under floating instrument chrome;
+   a slide-out specimen card on the right (bottom sheet on phones). Light = brightfield H&E slide,
+   dark = fluorescence channels (DAPI / GFP / MitoTracker). */
+:root{
+  --bg:#f3f1f6; --bg2:#e9e5ef; --ink:#221b2f; --ink2:#62587a; --line:#d8d0e3;
+  --panel:#fbfafc; --glass:rgba(251,250,252,.88); --accent:#6a3db3; --accent-ink:#ffffff; --accent-soft:#ece4f8;
+  --font-display:"Oranienbaum","Didot","Bodoni 72","Times New Roman",serif;
+  --font-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,"SF Mono",Consolas,monospace;
+  /* stage stains */
+  --k-bg:#f3f1f6; --k-grid:#8b7fa6; --k-ground:#6b5d86; --k-ink:#2a2138; --k-ink2:#6c6284;
+  --k-mem:#9c3f70; --k-cyto:#f2c6d7; --k-cyto2:#e3a2bf; --k-nuc:#5b3c95; --k-nuc2:#3f2574; --k-nucl:#26134f;
+  --k-gpos:#5a2c90; --k-gneg:#da5a8c; --k-green:#4d8c3b; --k-green2:#2e6826; --k-mito:#c95679; --k-mito2:#8e2c52;
+  --k-vir:#56688c; --k-vir2:#97a5c4; --k-rna:#c0533a; --k-lipid:#efd38a; --k-red:#d4425a; --k-red2:#a42a42;
+  --k-gold:#c98323; --k-silica:#4f8aa1; --k-sil:#3a3050; --k-golgi:#3a281d; --k-glow:#6a3db3;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#060914; --bg2:#0c1222; --ink:#e3e8f7; --ink2:#8e97b6; --line:#1d2742;
+  --panel:#0a0f1f; --glass:rgba(9,13,27,.84); --accent:#47cfff; --accent-ink:#04121c; --accent-soft:#0f2638;
+  --k-bg:#060914; --k-grid:#5d74b8; --k-ground:#7f93d0; --k-ink:#e3e8f7; --k-ink2:#8e97b6;
+  --k-mem:#39e88b; --k-cyto:#0f3a2b; --k-cyto2:#15553f; --k-nuc:#2f5cff; --k-nuc2:#6f8fff; --k-nucl:#c3cfff;
+  --k-gpos:#b27dff; --k-gneg:#ff5eae; --k-green:#ff4d4d; --k-green2:#ff8f80; --k-mito:#ff7a3c; --k-mito2:#ffb27e;
+  --k-vir:#ffcc47; --k-vir2:#fff0a6; --k-rna:#ff5fd2; --k-lipid:#ffe26b; --k-red:#ff3d63; --k-red2:#ff8ba1;
+  --k-gold:#ffb347; --k-silica:#6ff0ff; --k-sil:#c7d2f6; --k-golgi:#8affc0; --k-glow:#47cfff;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#060914; --bg2:#0c1222; --ink:#e3e8f7; --ink2:#8e97b6; --line:#1d2742;
+  --panel:#0a0f1f; --glass:rgba(9,13,27,.84); --accent:#47cfff; --accent-ink:#04121c; --accent-soft:#0f2638;
+  --k-bg:#060914; --k-grid:#5d74b8; --k-ground:#7f93d0; --k-ink:#e3e8f7; --k-ink2:#8e97b6;
+  --k-mem:#39e88b; --k-cyto:#0f3a2b; --k-cyto2:#15553f; --k-nuc:#2f5cff; --k-nuc2:#6f8fff; --k-nucl:#c3cfff;
+  --k-gpos:#b27dff; --k-gneg:#ff5eae; --k-green:#ff4d4d; --k-green2:#ff8f80; --k-mito:#ff7a3c; --k-mito2:#ffb27e;
+  --k-vir:#ffcc47; --k-vir2:#fff0a6; --k-rna:#ff5fd2; --k-lipid:#ffe26b; --k-red:#ff3d63; --k-red2:#ff8ba1;
+  --k-gold:#ffb347; --k-silica:#6ff0ff; --k-sil:#c7d2f6; --k-golgi:#8affc0; --k-glow:#47cfff;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5;overflow:hidden;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.app{position:fixed;inset:0;overflow:hidden;overflow:clip}
+#stage{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#stage.dragging{cursor:grabbing}
+#stage.hover{cursor:pointer}
+
+/* top bar */
+.bar{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;align-items:center;gap:14px;
+  padding-top:calc(12px + env(safe-area-inset-top,0px));padding-bottom:6px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  pointer-events:none}
+.bar>*{pointer-events:auto}
+.brand{display:flex;align-items:baseline;gap:10px;min-width:0}
+.brand-name{font-family:var(--font-display);font-size:26px;line-height:1;letter-spacing:.01em;white-space:nowrap}
+.brand-sub{font-family:var(--font-mono);font-size:11px;color:var(--ink2);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.bar-actions{margin-left:auto;display:flex;gap:6px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);
+  background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer;font-size:13.5px;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn svg{width:16px;height:16px;flex:none}
+.btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.icon{width:36px;padding:0;justify-content:center}
+
+/* chapter track */
+.track{position:absolute;z-index:4;left:0;right:0;top:calc(58px + env(safe-area-inset-top,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.track-row{position:relative;display:flex;gap:2px;height:8px;cursor:pointer;touch-action:none}
+.seg{flex:1 1 0;border-radius:2px;background:var(--seg);opacity:.35;transition:opacity .2s}
+.seg.on{opacity:1}
+.track-marker{position:absolute;top:-4px;width:2px;height:16px;background:var(--ink);border-radius:1px;pointer-events:none;transform:translateX(-1px)}
+.track-meta{display:flex;justify-content:space-between;gap:12px;margin-top:6px;font-family:var(--font-mono);font-size:11px;color:var(--ink2);letter-spacing:.04em}
+.track-meta b{color:var(--ink);font-weight:600}
+
+/* scale instruments */
+.scale{position:absolute;z-index:4;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(22px + env(safe-area-inset-bottom,0px));
+  font-family:var(--font-mono);font-size:12px;color:var(--ink2);display:grid;gap:4px;pointer-events:none}
+.scale-bar{height:6px;border:2px solid var(--ink);border-top:0;width:100px}
+.scale-lbl{color:var(--ink);font-weight:600;font-size:13px}
+
+/* caption */
+.caption{position:absolute;z-index:4;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));
+  width:min(640px,calc(100% - 2 * max(16px,env(safe-area-inset-left,0px))));display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;
+  background:var(--glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:16px;padding:14px 14px;transition:opacity .25s}
+.caption.hide{opacity:0;pointer-events:none}
+.nav-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:transparent;cursor:pointer;display:grid;place-items:center}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent)}
+.nav-btn svg{width:18px;height:18px}
+.cap-body{min-width:0;display:grid;gap:2px}
+.eyebrow{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);min-width:0}
+.eyebrow .dot{width:8px;height:8px;border-radius:50%;background:var(--chap,var(--accent));flex:none}
+.eyebrow .chap{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eyebrow .idx{margin-left:auto;white-space:nowrap}
+.cap-title{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;min-width:0}
+.cap-name{font-family:var(--font-display);font-size:34px;line-height:1.08;margin:2px 0 0;font-weight:400;text-wrap:balance}
+.cap-size{font-family:var(--font-mono);font-size:15px;font-weight:600;color:var(--accent);white-space:nowrap;font-variant-numeric:tabular-nums}
+.cap-en{font-size:13px;color:var(--ink2);font-style:italic}
+.cap-lead{margin:4px 0 0;font-size:14px;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cap-more{justify-self:start;margin-top:8px;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border-radius:999px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:13px;cursor:pointer}
+
+.hint{position:absolute;z-index:3;left:50%;top:calc(112px + env(safe-area-inset-top,0px));transform:translateX(-50%);font-size:13px;color:var(--ink2);
+  background:var(--glass);border:1px solid var(--line);padding:6px 14px;border-radius:999px;white-space:nowrap;transition:opacity .6s;pointer-events:none}
+.hint.gone{opacity:0}
+
+/* detail panel */
+.panel{position:absolute;z-index:8;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--panel);border-left:1px solid var(--line);
+  display:flex;flex-direction:column;transform:translateX(102%);visibility:hidden;transition:transform .38s cubic-bezier(.2,.8,.2,1),visibility 0s .38s;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+.panel.open{transform:none;visibility:visible;transition:transform .38s cubic-bezier(.2,.8,.2,1),visibility 0s}
+.p-head{display:flex;align-items:center;gap:8px;padding:14px 16px 10px 20px;border-bottom:1px solid var(--line)}
+.chip{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);min-width:0}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:var(--chap,var(--accent));flex:none}
+.chip span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-nav{margin-left:auto;display:flex;gap:4px}
+.p-nav button{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:transparent;cursor:pointer;display:grid;place-items:center}
+.p-nav button:hover{border-color:var(--accent)}
+.p-nav svg{width:16px;height:16px}
+.p-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:18px 20px 28px;display:grid;grid-auto-rows:max-content;gap:18px;align-content:start}
+.p-title h2{font-family:var(--font-display);font-weight:400;font-size:38px;line-height:1.05;margin:0;text-wrap:balance}
+.p-en{color:var(--ink2);font-style:italic;font-size:14px;margin-top:4px}
+.p-size{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:10px}
+.p-size .v{font-family:var(--font-mono);font-weight:600;font-size:20px;color:var(--accent);font-variant-numeric:tabular-nums}
+.p-size .n{font-size:13px;color:var(--ink2)}
+.media{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--bg)}
+.m-tabs{display:flex;gap:2px;padding:6px;border-bottom:1px solid var(--line);background:var(--bg2)}
+.m-tabs button{flex:1;height:30px;border:0;border-radius:8px;background:transparent;cursor:pointer;font-size:13px;font-weight:500;color:var(--ink2)}
+.m-tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+.m-view{position:relative;height:300px}
+.m-view>*{position:absolute;inset:0}
+#v3d{touch-action:none}
+#v3d canvas{outline:none}
+.m-photo{margin:0;display:flex;flex-direction:column;background:#fff}
+.m-photo img{flex:1;min-height:0;width:100%;object-fit:contain;background:#fff}
+.m-photo figcaption{font-size:11px;color:#5d5470;padding:6px 10px;background:#f6f4f8;border-top:1px solid #e3dcec;line-height:1.35}
+.m-photo figcaption a{color:inherit}
+#mDraw{width:100%;height:100%;display:block}
+.m-tools{display:flex;gap:6px;flex-wrap:wrap;padding:8px;border-top:1px solid var(--line);background:var(--bg2);align-items:center}
+.m-tools button{height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-size:12px}
+.m-tools button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);font-weight:600}
+.m-tools .note{font-size:11.5px;color:var(--ink2);margin-left:auto}
+.m-status{display:grid;place-items:center;font-size:13px;color:var(--ink2);pointer-events:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-family:var(--font-mono);font-size:11px;color:var(--ink2);padding:8px 10px;border-top:1px solid var(--line)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px;border:1px solid rgba(0,0,0,.25)}
+.p-desc{margin:0;font-size:15.5px;line-height:1.6;max-width:65ch}
+.p-sec h3{margin:0 0 8px;font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);font-weight:600}
+.facts{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.facts li{position:relative;padding-left:18px;font-size:14.5px;line-height:1.5}
+.facts li::before{content:"";position:absolute;left:2px;top:.62em;width:7px;height:7px;border-radius:50%;border:1.5px solid var(--accent)}
+.props{display:grid;grid-template-columns:minmax(110px,auto) 1fr;gap:6px 14px;margin:0;font-size:14px}
+.props dt{color:var(--ink2)}
+.props dd{margin:0;font-variant-numeric:tabular-nums;min-width:0}
+.codons{display:flex;flex-wrap:wrap;gap:4px}
+.codons span{font-family:var(--font-mono);font-size:12px;padding:1px 6px;border-radius:5px;background:var(--accent-soft);color:var(--ink)}
+.cmp-list{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:14px}
+.cmp-list b{font-family:var(--font-mono);font-weight:600;color:var(--accent)}
+.cmp-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cmp-row select{flex:1;min-width:0;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:14px;padding:0 8px}
+#cmpCanvas{width:100%;height:200px;display:block;border:1px solid var(--line);border-radius:12px;margin-top:8px;background:var(--bg)}
+.cmp-text{font-size:14px;margin:8px 0 0}
+.src{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:13px}
+.src a{color:var(--accent)}
+.src .muted{color:var(--ink2)}
+
+/* catalog */
+.catalog{position:absolute;z-index:10;inset:0;background:var(--bg);display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .25s,visibility 0s .25s;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.catalog.open{opacity:1;visibility:visible;transition:opacity .25s,visibility 0s}
+.cat-head{display:grid;gap:12px;padding:16px max(16px,env(safe-area-inset-right,0px)) 12px max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line)}
+.cat-top{display:flex;gap:10px;align-items:center}
+.cat-top h2{font-family:var(--font-display);font-weight:400;font-size:30px;margin:0;line-height:1}
+.cat-count{font-family:var(--font-mono);font-size:12px;color:var(--ink2)}
+.cat-search{flex:1;min-width:0;height:40px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;padding:0 16px;font-size:15px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:thin}
+.chips button{flex:none;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:transparent;cursor:pointer;font-size:12.5px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.chips button i{width:7px;height:7px;border-radius:50%;background:var(--chap)}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.cat-body{flex:1;overflow-y:auto;padding:16px max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px))}
+.cat-group{margin-bottom:22px}
+.cat-group h3{font-family:var(--font-display);font-weight:400;font-size:22px;margin:0 0 10px;display:flex;align-items:center;gap:10px}
+.cat-group h3 i{width:10px;height:10px;border-radius:50%;background:var(--chap)}
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.card{display:grid;grid-template-columns:52px 1fr;gap:10px;align-items:center;text-align:left;padding:8px;border-radius:12px;border:1px solid var(--line);background:var(--panel);cursor:pointer;min-width:0}
+.card:hover{border-color:var(--accent)}
+.card canvas{width:52px;height:52px;display:block}
+.card b{display:block;font-weight:600;font-size:13.5px;line-height:1.25;overflow-wrap:anywhere}
+.card small{font-family:var(--font-mono);font-size:11.5px;color:var(--ink2)}
+.cat-empty{color:var(--ink2);padding:30px 0}
+
+@media (max-width:860px){
+  .brand-sub{display:none}
+  .btn .lbl{display:none}
+  .btn{width:36px;padding:0;justify-content:center}
+}
+@media (max-width:760px){
+  .bar{gap:8px}
+  .bar-actions{gap:4px}
+  .btn,.btn.icon{width:34px;height:34px}
+  .brand{min-width:0;flex:1 1 auto}
+  .brand-name{font-size:17px;overflow:hidden;text-overflow:ellipsis}
+  .track{top:calc(52px + env(safe-area-inset-top,0px))}
+  .track-meta .blurb,#trackFov,#gridLbl{display:none}
+  .scale{bottom:auto;top:calc(90px + env(safe-area-inset-top,0px));display:flex;align-items:center;gap:8px}
+  .hint{top:calc(122px + env(safe-area-inset-top,0px));font-size:12px;white-space:normal;text-align:center;width:max-content;max-width:calc(100% - 32px)}
+  .caption{grid-template-columns:1fr;padding:12px 14px}
+  .caption .nav-btn{display:none}
+  .cap-name{font-size:28px}
+  .cap-lead{-webkit-line-clamp:2}
+  .cap-actions{display:flex;gap:8px;align-items:center}
+  .panel{top:auto;height:88%;width:100%;border-left:0;border-top:1px solid var(--line);border-radius:18px 18px 0 0;transform:translateY(102%);padding-right:0}
+  .p-title h2{font-size:32px}
+  .m-view{height:260px}
+}
+.cap-actions{display:flex;gap:8px;align-items:center;margin-top:8px}
+.cap-actions .cap-more{margin-top:0}
+.cap-actions .mob{display:none}
+@media (max-width:760px){ .cap-actions .mob{display:grid;width:32px;height:32px} }
+@media (prefers-reduced-motion: reduce){ .panel,.catalog,.caption,.hint{transition:none} }
+</style>
+
+<div class="app" id="app">
+  <canvas id="stage" role="img" aria-label="Шкала размеров живого: объекты, нарисованные в одном масштабе"></canvas>
+
+  <header class="bar">
+    <div class="brand"><span class="brand-name">Атлас масштабов жизни</span><span class="brand-sub" id="brandSub">от атома до грибницы</span></div>
+    <div class="bar-actions">
+      <button class="btn" id="btnCat" title="Каталог (/)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span class="lbl">Каталог</span></button>
+      <button class="btn" id="btnTour" aria-pressed="false" title="Автоматический тур"><svg viewBox="0 0 24 24" fill="currentColor"><path id="tourIcon" d="M8 5.5v13l11-6.5z"/></svg><span class="lbl">Тур</span></button>
+      <button class="btn" id="btnRand" title="Случайный объект"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3.5c4.5 0 5.5 10 10 10H20M17 14l3 3-3 3M4 17h3.5c1.6 0 2.7-1.3 3.6-3M14 9.5c.9-1.4 2-2.5 3.5-2.5H20M17 4l3 3-3 3"/></svg><span class="lbl">Случайный</span></button>
+      <button class="btn" id="btnMode" title="Режим микроскопа"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span class="lbl" id="modeLbl">Флуоресценция</span></button>
+    </div>
+  </header>
+
+  <nav class="track" aria-label="Разделы шкалы">
+    <div class="track-row" id="trackRow"><div class="track-marker" id="trackMarker"></div></div>
+    <div class="track-meta"><span id="trackChap"></span><span id="trackFov"></span></div>
+  </nav>
+
+  <div class="scale" aria-hidden="true"><div class="scale-bar" id="scaleBar"></div><span class="scale-lbl" id="scaleLbl"></span><span id="gridLbl"></span></div>
+
+  <div class="hint" id="hint">Крутите колесо, тяните или жмите → — с каждым шагом объекты крупнее</div>
+
+  <section class="caption" id="caption" aria-live="polite">
+    <button class="nav-btn" id="capPrev" aria-label="Предыдущий объект"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="cap-body">
+      <div class="eyebrow"><span class="dot" id="capDot"></span><span class="chap" id="capChap"></span><span class="idx" id="capIdx"></span></div>
+      <div class="cap-title"><h1 class="cap-name" id="capName"></h1><span class="cap-size" id="capSize"></span></div>
+      <div class="cap-en" id="capEn"></div>
+      <p class="cap-lead" id="capLead"></p>
+      <div class="cap-actions">
+        <button class="nav-btn mob" id="capPrev2" aria-label="Предыдущий объект"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button class="cap-more" id="capMore">Подробнее<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <button class="nav-btn mob" id="capNext2" aria-label="Следующий объект"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+    </div>
+    <button class="nav-btn" id="capNext" aria-label="Следующий объект"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+  </section>
+
+  <aside class="panel" id="panel" aria-label="Подробности об объекте">
+    <div class="p-head">
+      <span class="chip"><span class="dot" id="pDot"></span><span id="pChap"></span></span>
+      <div class="p-nav">
+        <button id="pPrev" aria-label="Предыдущий"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button id="pNext" aria-label="Следующий"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+        <button id="pClose" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+    </div>
+    <div class="p-scroll" id="pScroll">
+      <div class="p-title">
+        <h2 id="pName"></h2>
+        <div class="p-en" id="pEn"></div>
+        <div class="p-size"><span class="v" id="pSize"></span><span class="n" id="pSizeNote"></span></div>
+      </div>
+      <div class="media" id="media">
+        <div class="m-tabs" role="tablist" id="mTabs"></div>
+        <div class="m-view" id="mView">
+          <div id="v3d" hidden></div>
+          <figure class="m-photo" id="mPhoto" hidden><img id="mImg" alt=""><figcaption id="mCap"></figcaption></figure>
+          <canvas id="mDraw" hidden></canvas>
+          <div class="m-status" id="mStatus" hidden></div>
+        </div>
+        <div class="m-tools" id="mTools" hidden></div>
+        <div class="legend" id="mLegend" hidden></div>
+      </div>
+      <p class="p-desc" id="pDesc"></p>
+      <section class="p-sec" id="secFacts"><h3>Интересно</h3><ul class="facts" id="pFacts"></ul></section>
+      <section class="p-sec" id="secProps"><h3>Характеристики</h3><dl class="props" id="pProps"></dl></section>
+      <section class="p-sec"><h3>Если сравнить</h3><ul class="cmp-list" id="pCmp"></ul></section>
+      <section class="p-sec"><h3>Положить рядом</h3>
+        <div class="cmp-row"><label for="cmpSel" class="muted" style="font-size:13px;color:var(--ink2)">С чем:</label><select id="cmpSel"></select></div>
+        <canvas id="cmpCanvas"></canvas>
+        <p class="cmp-text" id="cmpText"></p>
+      </section>
+      <section class="p-sec"><h3>Источники и изображения</h3><ul class="src" id="pSrc"></ul></section>
+    </div>
+  </aside>
+
+  <div class="catalog" id="catalog" role="dialog" aria-modal="true" aria-label="Каталог объектов">
+    <div class="cat-head">
+      <div class="cat-top"><h2>Каталог</h2><span class="cat-count" id="catCount"></span>
+        <button class="btn icon" id="catClose" aria-label="Закрыть каталог" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+      <input class="cat-search" id="catQ" type="search" placeholder="Найти: эритроцит, триптофан, вирус…" autocomplete="off">
+      <div class="chips" id="catChips"></div>
+    </div>
+    <div class="cat-body" id="catBody"></div>
+  </div>
+</div>
+
+<script type="application/json" id="data">__DATA__</script>
+<script>
+(() => {
+"use strict";
+const DATA = JSON.parse(document.getElementById("data").textContent);
+const CH = DATA.chapters, IT = DATA.items, N = IT.length;
+const $ = id => document.getElementById(id);
+const TAU = Math.PI * 2;
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const FD = '"Oranienbaum","Times New Roman",serif', FB = '"Golos Text",system-ui,sans-serif', FM = '"JetBrains Mono",ui-monospace,monospace';
+const chapIdx = {}; CH.forEach((c, i) => { chapIdx[c.id] = i; c.first = -1; c.count = 0; });
+
+/* ───────── layout ───────── */
+let X = 0;
+IT.forEach((it, i) => {
+  it.i = i; it.ci = chapIdx[it.c];
+  const c = CH[it.ci]; if (c.first < 0) c.first = i; c.count++;
+  const prev = IT[i - 1];
+  if (prev) { X += Math.max(prev.w, prev.h, it.w, it.h) * 0.32; }
+  it.x = X; X += it.w;
+  it.seed = hash(it.id);
+  it.lead = (it.d.match(/^.*?[.!?](\s|$)/) || [it.d])[0].trim();
+  if (it.m) {
+    it.M = { e: it.m.e, X: Float32Array.from(it.m.x), b: [] };
+    for (let k = 0; k < it.m.b.length; k += 3) it.M.b.push([it.m.b[k], it.m.b[k + 1], it.m.b[k + 2]]);
+  }
+});
+function hash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function rng(seed) { let a = seed >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+/* ───────── format ───────── */
+const nf = (v, d) => v.toLocaleString("ru-RU", { maximumSignificantDigits: d });
+function fmtSize(m) {
+  const a = Math.abs(m);
+  let v, u;
+  if (a < 1e-6) { v = m * 1e9; u = "нм"; }
+  else if (a < 1e-4) { v = m * 1e6; u = "мкм"; }
+  else if (a < 1e-2) { v = m * 1e3; u = "мм"; }
+  else if (a < 1) { v = m * 100; u = "см"; }
+  else if (a < 1000) { v = m; u = "м"; }
+  else { v = m / 1000; u = "км"; }
+  return nf(v, 3) + " " + u;
+}
+function fmtRatio(r) {
+  if (r < 10) return nf(r, 2);
+  if (r < 1000) return nf(Math.round(r), 3);
+  if (r < 1e6) return nf(Math.round(r / 100) * 100, 3);
+  const e = Math.floor(Math.log10(r)), mant = r / 10 ** e;
+  if (r < 1e9) return nf(r / 1e6, 2) + " млн";
+  if (r < 1e12) return nf(r / 1e9, 2) + " млрд";
+  if (r < 1e15) return nf(r / 1e12, 2) + " трлн";
+  return nf(mant, 2) + "·10" + sup(e);
+}
+const sup = n => String(n).split("").map(c => "⁰¹²³⁴⁵⁶⁷⁸⁹⁻"["0123456789-".indexOf(c)]).join("");
+const sizeOf = it => Math.max(it.w, it.h);
+
+/* ───────── palette ───────── */
+const KEYS = ["bg", "grid", "ground", "ink", "ink2", "mem", "cyto", "cyto2", "nuc", "nuc2", "nucl", "gpos", "gneg", "green", "green2", "mito", "mito2", "vir", "vir2", "rna", "lipid", "red", "red2", "gold", "silica", "sil", "golgi", "glow"];
+let P = {};
+const AC = new Map();
+function A(c, a) { const k = c + a; let v = AC.get(k); if (v) return v; const n = parseInt(c.slice(1), 16); v = `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; AC.set(k, v); return v; }
+function mix(c1, c2, t) { const a = parseInt(c1.slice(1), 16), b = parseInt(c2.slice(1), 16); const f = (s) => Math.round(((a >> s) & 255) * (1 - t) + ((b >> s) & 255) * t); return "#" + ((1 << 24) | (f(16) << 16) | (f(8) << 8) | f(0)).toString(16).slice(1); }
+const EL = { H: "#ffffff", C: "#8f8f8f", N: "#3355f5", O: "#f0281e", S: "#f2d81d", P: "#ff8000", Se: "#ffa100", I: "#940094", Fe: "#e06633", Co: "#f090a0", Mg: "#5fd400", Cl: "#1fd01f", Na: "#ab5cf2", K: "#8f40d4", Ca: "#3dce00", Zn: "#7d80b0", Br: "#a62929", F: "#90e050" };
+let ELS = {};
+function readPalette() {
+  const cs = getComputedStyle(document.documentElement);
+  KEYS.forEach(k => { P[k] = cs.getPropertyValue("--k-" + k).trim() || "#888888"; });
+  P.dark = isDark();
+  ELS = {};
+  for (const e in EL) {
+    let b = EL[e];
+    if (!P.dark && (e === "H" || e === "S")) b = mix(b, "#000000", e === "H" ? .12 : .1);
+    ELS[e] = { b, l: mix(b, "#ffffff", .55), d: mix(b, "#000000", .45) };
+  }
+  tintCache.clear();
+}
+function isDark() {
+  const t = document.documentElement.getAttribute("data-theme");
+  if (t) return t === "dark";
+  return matchMedia("(prefers-color-scheme: dark)").matches;
+}
+function chapColor(ci, alpha) {
+  const hue = 300 - ci * (285 / (CH.length - 1));
+  return `oklch(${P.dark ? .78 : .58} ${P.dark ? .14 : .15} ${hue}${alpha != null ? " / " + alpha : ""})`;
+}
+function elShade(e) { return ELS[e] || ELS.C; }
+
+/* ───────── images ───────── */
+const IMG = new Map();
+function getImg(src) {
+  let r = IMG.get(src);
+  if (!r) {
+    const im = new Image(); r = { im, ok: false };
+    im.decoding = "async";
+    im.onload = () => { r.ok = true; dirty = true; refreshThumbs(src); };
+    im.src = src; IMG.set(src, r);
+  }
+  return r.ok ? r.im : null;
+}
+const tintCache = new Map();
+function tinted(src, col) {
+  const key = src + col; let c = tintCache.get(key); if (c) return c;
+  const im = getImg(src); if (!im) return null;
+  c = document.createElement("canvas"); const nw = im.naturalWidth || 512, nh = im.naturalHeight || 512, sc = Math.max(1, 1000 / Math.max(nw, nh)); c.width = Math.round(nw * sc); c.height = Math.round(nh * sc);
+  const g = c.getContext("2d"); g.drawImage(im, 0, 0, c.width, c.height); g.globalCompositeOperation = "source-in"; g.fillStyle = col; g.fillRect(0, 0, c.width, c.height);
+  tintCache.set(key, c); return c;
+}
+
+/* ───────── drawing helpers ───────── */
+const lw = v => Math.max(.6, v);
+function smooth(g, pts, closed) {
+  const n = pts.length; if (n < 2) return;
+  if (closed) {
+    const p0 = pts[n - 1], p1 = pts[0]; g.moveTo((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2);
+    for (let i = 0; i < n; i++) { const a = pts[i], b = pts[(i + 1) % n]; g.quadraticCurveTo(a[0], a[1], (a[0] + b[0]) / 2, (a[1] + b[1]) / 2); }
+    g.closePath();
+  } else {
+    g.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < n - 1; i++) { const a = pts[i], b = pts[i + 1]; g.quadraticCurveTo(a[0], a[1], (a[0] + b[0]) / 2, (a[1] + b[1]) / 2); }
+    g.lineTo(pts[n - 1][0], pts[n - 1][1]);
+  }
+}
+function blobPts(cx, cy, rx, ry, R, amp = .08, n = 12, rot = 0) { const p = []; for (let i = 0; i < n; i++) { const t = i / n * TAU + rot, k = 1 + (R() * 2 - 1) * amp; p.push([cx + Math.cos(t) * rx * k, cy + Math.sin(t) * ry * k]); } return p; }
+function blob(g, cx, cy, rx, ry, R, amp, n, rot) { g.beginPath(); smooth(g, blobPts(cx, cy, rx, ry, R, amp, n, rot), true); }
+function ell(g, x, y, rx, ry, rot = 0) { g.beginPath(); g.ellipse(x, y, Math.max(rx, .05), Math.max(ry, .05), rot, 0, TAU); }
+function circ(g, x, y, r) { g.beginPath(); g.arc(x, y, Math.max(r, .05), 0, TAU); }
+function stad(g, x, y, w, h) { const r = Math.min(w, h) / 2; g.beginPath(); g.roundRect(x - w / 2, y - h / 2, w, h, r); }
+function fs(g, f, s, w) { if (f) { g.fillStyle = f; g.fill(); } if (s && w > 0) { g.strokeStyle = s; g.lineWidth = w; g.stroke(); } }
+function inEll(R, cx, cy, rx, ry) { return () => { const a = R() * TAU, d = Math.sqrt(R()); return [cx + Math.cos(a) * rx * d, cy + Math.sin(a) * ry * d]; }; }
+function dots(g, n, gen, r, col) { g.fillStyle = col; g.beginPath(); for (let i = 0; i < n; i++) { const [x, y] = gen(); g.moveTo(x + r, y); g.arc(x, y, Math.max(r, .3), 0, TAU); } g.fill(); }
+function wave(g, x0, y0, x1, y1, amp, waves, ph = 0, steps = 48, taper = true) {
+  const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+  g.beginPath();
+  for (let i = 0; i <= steps; i++) { const t = i / steps, s = Math.sin(t * waves * TAU + ph) * amp * (taper ? Math.min(1, t * 3) : 1); const x = x0 + dx * t + nx * s, y = y0 + dy * t + ny * s; i ? g.lineTo(x, y) : g.moveTo(x, y); }
+}
+function line(g, x0, y0, x1, y1) { g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); }
+const FA = () => P.dark ? .5 : .88; /* fill alpha */
+function cellBody(g, pathFn, fill, stroke, W) { pathFn(); fs(g, A(fill, FA()), stroke, lw(Math.min(W, 400) * .012)); }
+function glowOn(g, col, b) { if (P.dark) { g.shadowColor = col; g.shadowBlur = b; } }
+function glowOff(g) { g.shadowBlur = 0; }
+
+/* ───────── visual types ───────── */
+const D = {};
+D.atom = (g, it, W, H, R, T, F) => {
+  const r = Math.min(W, H) / 2, sym = it.v.sym, sh = elShade(sym).b;
+  const gr = g.createRadialGradient(0, 0, 0, 0, 0, r);
+  gr.addColorStop(0, A(sh, P.dark ? .6 : .5)); gr.addColorStop(.5, A(sh, P.dark ? .25 : .22)); gr.addColorStop(1, A(sh, 0));
+  g.fillStyle = gr; circ(g, 0, 0, r); g.fill();
+  if (r < 5) return;
+  const shells = it.p.shells, n = shells.length;
+  for (let j = 0; j < n; j++) {
+    const rr = r * (.3 + .6 * (j + 1) / n);
+    g.strokeStyle = A(P.ink, .2); g.lineWidth = lw(r * .006); circ(g, 0, 0, rr); g.stroke();
+    if (r > 22) {
+      const cnt = Math.min(shells[j], 12), sp = (F && !RM ? T * (1.1 / (j + 1)) : 0) + j * .8;
+      g.fillStyle = P.dark ? "#ffffff" : P.ink;
+      for (let e = 0; e < cnt; e++) { const a = sp + e / cnt * TAU; circ(g, Math.cos(a) * rr, Math.sin(a) * rr, Math.max(1.3, r * .022)); g.fill(); }
+    }
+  }
+  if (r > 26) {
+    g.font = `400 ${r * .5}px ${FD}`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = P.ink;
+    g.fillText(sym, 0, r * .03);
+  } else { g.fillStyle = P.ink; circ(g, 0, 0, Math.max(1, r * .05)); g.fill(); }
+};
+const VDW = { H: 1.2, C: 1.7, N: 1.55, O: 1.52, S: 1.8, P: 1.8, Se: 1.9, I: 1.98, Fe: 2, Co: 2, Mg: 1.73, Cl: 1.75, Br: 1.85, F: 1.47, Na: 2.27, K: 2.75, Ca: 2.31, Zn: 1.39 };
+function molProject(M, s, th, tilt) {
+  const n = M.e.length, ct = Math.cos(th), st = Math.sin(th), cl = Math.cos(tilt), sl = Math.sin(tilt);
+  const px = new Float32Array(n), py = new Float32Array(n), pz = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = M.X[3 * i], y = M.X[3 * i + 1], z = M.X[3 * i + 2];
+    const x1 = x * ct + z * st, z1 = -x * st + z * ct, y1 = y * cl - z1 * sl, z2 = y * sl + z1 * cl;
+    px[i] = x1 * s; py[i] = -y1 * s; pz[i] = z2;
+  }
+  return { px, py, pz };
+}
+function drawMol(g, M, s, th, tilt, halo) {
+  const { px, py, pz } = molProject(M, s, th, tilt), n = M.e.length;
+  if (halo) { for (let i = 0; i < n; i++) { g.fillStyle = A(elShade(M.e[i]).b, P.dark ? .07 : .08); circ(g, px[i], py[i], (VDW[M.e[i]] || 1.8) * s); g.fill(); } }
+  const list = [];
+  for (let i = 0; i < n; i++) list.push([pz[i], 0, i]);
+  for (const b of M.b) list.push([(pz[b[0]] + pz[b[1]]) / 2 - .35, 1, b]);
+  list.sort((a, b) => a[0] - b[0]);
+  const bw = .2 * s, out = P.dark ? "#000000" : "#2a2138";
+  for (const L of list) {
+    if (L[1] === 1) {
+      const [a, b, o] = L[2]; const x0 = px[a], y0 = py[a], x1 = px[b], y1 = py[b], mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+      const dx = x1 - x0, dy = y1 - y0, l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
+      const offs = o === 2 ? [-.55, .55] : o === 3 ? [-.9, 0, .9] : [0];
+      const w = o === 1 ? bw : bw * .62;
+      g.lineCap = "round";
+      for (const of of offs) {
+        const ox = nx * of * bw * 1.15, oy = ny * of * bw * 1.15;
+        g.lineWidth = lw(w + Math.max(.8, s * .06)); g.strokeStyle = A(out, .55); line(g, x0 + ox, y0 + oy, x1 + ox, y1 + oy); g.stroke();
+        g.lineWidth = lw(w);
+        g.strokeStyle = elShade(M.e[a]).b; line(g, x0 + ox, y0 + oy, mx + ox, my + oy); g.stroke();
+        g.strokeStyle = elShade(M.e[b]).b; line(g, mx + ox, my + oy, x1 + ox, y1 + oy); g.stroke();
+      }
+    } else {
+      const i = L[2], e = M.e[i], sh = elShade(e), r = (VDW[e] || 1.8) * s * (e === "H" ? .26 : .3), x = px[i], y = py[i];
+      if (r < 2.2) { g.fillStyle = sh.b; circ(g, x, y, r); g.fill(); continue; }
+      const gr = g.createRadialGradient(x - r * .35, y - r * .4, r * .08, x, y, r);
+      gr.addColorStop(0, sh.l); gr.addColorStop(.55, sh.b); gr.addColorStop(1, sh.d);
+      g.fillStyle = gr; circ(g, x, y, r); g.fill();
+      g.lineWidth = Math.max(.5, r * .06); g.strokeStyle = A(out, .45); g.stroke();
+    }
+  }
+}
+D.mol = (g, it, W, H, R, T, F) => {
+  if (H < 9) { g.fillStyle = A(P.ink2, .55); ell(g, 0, 0, W / 2, H / 2); g.fill(); return; }
+  const s = H / it.m.h, th = (F && !RM && !it.m.flat) ? T * .5 : 0;
+  drawMol(g, it.M, s, th, .2, true);
+};
+D.img = (g, it, W, H) => {
+  const im = getImg(it.pi.src);
+  if (im) g.drawImage(im, -W / 2, -H / 2, W, H); else { g.fillStyle = A(P.vir, .3); ell(g, 0, 0, W / 2, H / 2); g.fill(); }
+};
+D.sil = (g, it, W, H) => {
+  const c = tinted(it.sil.src, P.sil);
+  if (c) g.drawImage(c, -W / 2, -H / 2, W, H); else { getImg(it.sil.src); g.fillStyle = A(P.sil, .25); ell(g, 0, 0, W / 2, H / 2); g.fill(); }
+};
+D.collagen = (g, it, W, H) => {
+  const cols = [P.red, P.gold, P.mem], n = Math.max(3, Math.min(35, W / 7));
+  g.lineCap = "round";
+  for (let k = 0; k < 3; k++) { g.strokeStyle = cols[k]; g.lineWidth = Math.max(1, H * .3); wave(g, -W / 2, 0, W / 2, 0, H * .32, n, k * TAU / 3, Math.min(900, n * 14), false); g.stroke(); }
+};
+D.titin = (g, it, W, H, R) => {
+  const n = Math.max(6, Math.min(300, W / 3.2)), r = Math.max(.6, H * .5);
+  for (let i = 0; i < n; i++) { const x = -W / 2 + (i + .5) / n * W, y = Math.sin(i * .5) * H * .25; g.fillStyle = i % 9 === 0 ? P.gold : (i % 2 ? P.vir : P.vir2); circ(g, x, y, Math.min(r, W / n * .6)); g.fill(); }
+};
+D.actin = (g, it, W, H) => {
+  const r = H * .27, step = r * 1.55, n = Math.ceil(W / step);
+  for (let s = 0; s < 2; s++) for (let i = 0; i < n; i++) {
+    const x = -W / 2 + r + i * step + (s ? step / 2 : 0); if (x > W / 2 - r) continue;
+    const y = Math.sin(i * .45 + s * Math.PI) * H * .2;
+    g.fillStyle = s ? P.red : P.red2; circ(g, x, y, r); g.fill(); g.strokeStyle = A(P.ink, .25); g.lineWidth = lw(r * .08); g.stroke();
+  }
+};
+D.mt = (g, it, W, H) => {
+  stad(g, 0, 0, W, H); fs(g, A(P.mem, P.dark ? .18 : .12), A(P.mem, .7), lw(H * .04));
+  const rows = 7, d = H * .8 / rows, cols = Math.ceil(W / (d * 2.1));
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const x = -W / 2 + d + c * d * 2.1 + (r % 2) * d * .5, y = -H * .4 + d / 2 + r * d; if (x > W / 2 - d) continue;
+    g.fillStyle = c % 2 ? P.mem : mix(P.mem, P.dark ? "#ffffff" : "#000000", .3); ell(g, x, y, d * .95, d * .44); g.fill();
+  }
+};
+function hexPath(g, R, rot = Math.PI / 6, sx = 1, sy = 1) { g.beginPath(); for (let i = 0; i < 6; i++) { const a = rot + i / 6 * TAU; const x = Math.cos(a) * R * sx, y = Math.sin(a) * R * sy; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); }
+D.icosa = (g, it, W, H, R) => {
+  const r = Math.min(W, H) / 2 * (it.v.fibers ? .72 : it.v.spikes ? .86 : .96), v = it.v;
+  if (v.fibers) { g.strokeStyle = P.vir2; g.lineWidth = lw(r * .04); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i / 6 * TAU; const x0 = Math.cos(a) * r, y0 = Math.sin(a) * r, x1 = Math.cos(a) * r * 1.36, y1 = Math.sin(a) * r * 1.36; line(g, x0, y0, x1, y1); g.stroke(); g.fillStyle = P.vir2; circ(g, x1, y1, r * .07); g.fill(); } }
+  if (v.spikes) { g.strokeStyle = P.vir2; g.lineWidth = lw(r * .05); for (let i = 0; i < 30; i++) { const a = i / 30 * TAU; line(g, Math.cos(a) * r * .95, Math.sin(a) * r * .95, Math.cos(a) * r * 1.14, Math.sin(a) * r * 1.14); g.stroke(); } }
+  hexPath(g, r);
+  const gr = g.createRadialGradient(-r * .3, -r * .3, r * .1, 0, 0, r * 1.1); gr.addColorStop(0, A(P.vir2, P.dark ? .55 : .9)); gr.addColorStop(1, A(P.vir, P.dark ? .55 : .95));
+  g.fillStyle = gr; g.fill(); g.strokeStyle = A(P.ink, .35); g.lineWidth = lw(r * .02); g.stroke();
+  if (r < 8) return;
+  g.save(); hexPath(g, r); g.clip();
+  for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i / 6 * TAU; g.strokeStyle = A(P.ink, .18); g.lineWidth = lw(r * .015); line(g, 0, 0, Math.cos(a) * r, Math.sin(a) * r); g.stroke(); if (i % 2) { g.fillStyle = A(P.ink, .06); g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a) * r, Math.sin(a) * r); const b = a + TAU / 6; g.lineTo(Math.cos(b) * r, Math.sin(b) * r); g.closePath(); g.fill(); } }
+  if (!v.smooth) {
+    const cs = r * (v.bumps ? .2 : .14), rows = Math.ceil(r / cs) + 1;
+    for (let yy = -rows; yy <= rows; yy++) for (let xx = -rows; xx <= rows; xx++) {
+      const x = (xx + (yy & 1) * .5) * cs * 1.05, y = yy * cs * .92; if (Math.hypot(x, y) > r) continue;
+      g.fillStyle = A(P.vir2, P.dark ? .55 : .8); circ(g, x, y, cs * .38); g.fill(); g.strokeStyle = A(P.ink, .2); g.lineWidth = lw(cs * .05); g.stroke();
+    }
+  }
+  g.restore();
+};
+D.env = (g, it, W, H, R) => {
+  const v = it.v, r = Math.min(W, H) / 2 * (v.spikes === "club" ? .76 : .82);
+  const n = v.spikes === "knob" ? 26 : 34;
+  for (let i = 0; i < n; i++) {
+    const a = i / n * TAU + R() * .08, ca = Math.cos(a), sa = Math.sin(a), L = r * (v.spikes === "club" ? .3 : v.spikes === "pin" ? .2 : .12);
+    g.strokeStyle = P.vir; g.lineWidth = lw(r * (v.spikes === "knob" ? .07 : .03)); line(g, ca * r, sa * r, ca * (r + L), sa * (r + L)); g.stroke();
+    if (v.spikes !== "knob") { g.fillStyle = v.spikes === "club" ? P.red : P.vir; circ(g, ca * (r + L), sa * (r + L), r * (v.spikes === "club" ? .08 : .045)); g.fill(); }
+  }
+  circ(g, 0, 0, r); fs(g, A(P.vir2, P.dark ? .18 : .35), P.lipid, lw(r * .07));
+  circ(g, 0, 0, r * .93); g.strokeStyle = A(P.gold, .7); g.lineWidth = lw(r * .02); g.stroke();
+  if (r < 8) return;
+  if (v.tegument) { dots(g, 60, () => { const a = R() * TAU, d = r * (.7 + R() * .15); return [Math.cos(a) * d, Math.sin(a) * d]; }, r * .03, A(P.gold, .7)); }
+  if (v.inner === "rnp") {
+    g.strokeStyle = P.rna; g.lineWidth = lw(r * .045); g.lineCap = "round";
+    for (let k = 0; k < 7; k++) { const a = R() * TAU, d = R() * r * .45, x = Math.cos(a) * d, y = Math.sin(a) * d, b = R() * TAU, L = r * (.3 + R() * .25); wave(g, x - Math.cos(b) * L / 2, y - Math.sin(b) * L / 2, x + Math.cos(b) * L / 2, y + Math.sin(b) * L / 2, r * .04, 5, 0, 30, false); g.stroke(); }
+  } else if (v.inner === "cone") {
+    g.beginPath(); g.moveTo(-r * .45, -r * .12); g.lineTo(r * .4, -r * .32); g.quadraticCurveTo(r * .58, 0, r * .4, r * .32); g.lineTo(-r * .45, r * .12); g.quadraticCurveTo(-r * .55, 0, -r * .45, -r * .12); g.closePath();
+    fs(g, A(P.vir, P.dark ? .45 : .8), P.ink, lw(r * .015));
+    g.strokeStyle = P.rna; g.lineWidth = lw(r * .03); wave(g, -r * .3, 0, r * .35, 0, r * .07, 4, 0, 30, false); g.stroke();
+  } else if (v.inner === "icosa") {
+    hexPath(g, r * .52); fs(g, A(P.vir, P.dark ? .5 : .85), A(P.ink, .4), lw(r * .015));
+    g.strokeStyle = A(P.rna, .8); g.lineWidth = lw(r * .02); wave(g, -r * .3, -r * .1, r * .3, r * .1, r * .08, 5, 0, 30, false); g.stroke();
+  }
+};
+D.bullet = (g, it, W, H, R) => {
+  const h = H * .7, w = W * .9, x0 = -w / 2, r = h / 2;
+  const path = () => { g.beginPath(); g.moveTo(x0, -r); g.lineTo(w / 2 - r, -r); g.arc(w / 2 - r, 0, r, -Math.PI / 2, Math.PI / 2); g.lineTo(x0, r); g.closePath(); };
+  g.strokeStyle = P.vir; g.lineWidth = lw(H * .03);
+  for (let i = 0; i < 26; i++) { const t = i / 25, x = x0 + t * (w - r); line(g, x, -r, x, -r - H * .11); g.stroke(); line(g, x, r, x, r + H * .11); g.stroke(); }
+  path(); fs(g, A(P.vir2, P.dark ? .3 : .6), P.lipid, lw(H * .05));
+  g.save(); path(); g.clip(); g.strokeStyle = A(P.rna, .75); g.lineWidth = lw(H * .04);
+  for (let x = x0 + H * .08; x < w / 2; x += H * .1) { line(g, x, -r * .8, x + H * .05, r * .8); g.stroke(); } g.restore();
+};
+D.rodv = (g, it, W, H) => {
+  g.beginPath(); g.rect(-W / 2, -H / 2, W, H); fs(g, A(P.vir, P.dark ? .45 : .85), A(P.ink, .4), lw(H * .04));
+  if (W < 30) return;
+  g.save(); g.beginPath(); g.rect(-W / 2, -H / 2, W, H); g.clip();
+  g.strokeStyle = A(P.vir2, .85); g.lineWidth = lw(H * .12);
+  for (let x = -W / 2 - H; x < W / 2 + H; x += H * .42) { line(g, x, -H / 2, x + H * .35, H / 2); g.stroke(); }
+  g.restore();
+  g.fillStyle = P.rna; circ(g, -W / 2, 0, H * .12); g.fill();
+};
+D.brick = (g, it, W, H, R) => {
+  g.beginPath(); g.roundRect(-W * .46, -H * .44, W * .92, H * .88, H * .22); fs(g, A(P.vir2, P.dark ? .3 : .7), P.vir, lw(H * .03));
+  g.strokeStyle = A(P.vir, .7); g.lineWidth = lw(H * .025); g.lineCap = "round";
+  for (let i = 0; i < 40; i++) { const x = (R() - .5) * W * .8, y = (R() - .5) * H * .76, a = R() * Math.PI; line(g, x, y, x + Math.cos(a) * H * .08, y + Math.sin(a) * H * .08); g.stroke(); }
+  g.beginPath(); g.moveTo(-W * .3, -H * .18); g.quadraticCurveTo(0, -H * .05, W * .3, -H * .18); g.lineTo(W * .3, H * .18); g.quadraticCurveTo(0, H * .05, -W * .3, H * .18); g.closePath();
+  fs(g, A(P.rna, P.dark ? .5 : .55), A(P.ink, .4), lw(H * .015));
+};
+D.filo = (g, it, W, H) => {
+  const t = H * .32, y = H * .2, cx = W / 2 - H * .5, cr = H * .3;
+  g.lineCap = "round"; g.lineWidth = lw(t); g.strokeStyle = A(P.vir, P.dark ? .7 : .9);
+  g.beginPath(); g.moveTo(-W / 2 + t / 2, y); g.lineTo(cx, y); g.arc(cx, y - cr, cr, Math.PI / 2, -Math.PI * .55, true); g.stroke();
+  g.lineWidth = lw(t * .28); g.strokeStyle = P.rna; g.stroke();
+};
+D.phage = (g, it, W, H) => {
+  const hw = W * .52, hh = H * .38, hy = -H / 2 + hh / 2 + H * .02;
+  g.strokeStyle = A(P.vir, .9); g.lineWidth = lw(W * .03); g.lineCap = "round";
+  const by = H * .36;
+  for (let s = -1; s <= 1; s += 2) for (let k = 0; k < 3; k++) { const kx = s * (W * .22 + k * W * .1), ky = by + H * .02; g.beginPath(); g.moveTo(s * W * .05, by); g.lineTo(kx, by - H * .1 + k * H * .03); g.lineTo(kx + s * W * .12, H / 2 - H * .02); g.stroke(); }
+  g.beginPath(); g.rect(-W * .07, hy + hh / 2, W * .14, by - hy - hh / 2); fs(g, A(P.vir2, P.dark ? .45 : .85), A(P.ink, .4), lw(W * .015));
+  for (let y = hy + hh / 2 + H * .03; y < by; y += H * .025) { line(g, -W * .07, y, W * .07, y); g.strokeStyle = A(P.ink, .25); g.lineWidth = lw(W * .008); g.stroke(); }
+  g.beginPath(); g.moveTo(-W * .18, by); g.lineTo(W * .18, by); g.lineTo(W * .12, by + H * .04); g.lineTo(-W * .12, by + H * .04); g.closePath(); fs(g, P.vir, null);
+  g.beginPath(); g.rect(-W * .1, hy + hh / 2 - H * .01, W * .2, H * .03); fs(g, P.vir, null);
+  g.beginPath(); g.moveTo(0, hy - hh / 2); g.lineTo(hw / 2, hy - hh / 2 + hw * .28); g.lineTo(hw / 2, hy + hh / 2 - hw * .28); g.lineTo(0, hy + hh / 2); g.lineTo(-hw / 2, hy + hh / 2 - hw * .28); g.lineTo(-hw / 2, hy - hh / 2 + hw * .28); g.closePath();
+  const gr = g.createLinearGradient(-hw / 2, 0, hw / 2, 0); gr.addColorStop(0, A(P.vir2, P.dark ? .5 : .95)); gr.addColorStop(1, A(P.vir, P.dark ? .5 : .95));
+  fs(g, gr, A(P.ink, .4), lw(W * .015));
+  g.strokeStyle = A(P.rna, .8); g.lineWidth = lw(W * .012);
+  for (let k = 0; k < 4; k++) { wave(g, -hw * .32, hy - hh * .3 + k * hh * .2, hw * .32, hy - hh * .3 + k * hh * .2, hh * .04, 3, k, 20, false); g.stroke(); }
+};
+D.giantv = (g, it, W, H, R) => {
+  const r = Math.min(W, H) / 2;
+  g.strokeStyle = A(P.vir2, .75); g.lineWidth = lw(r * .012);
+  for (let i = 0; i < 220; i++) { const a = R() * TAU, d0 = r * .52, d1 = r * (.88 + R() * .12); line(g, Math.cos(a) * d0, Math.sin(a) * d0, Math.cos(a) * d1, Math.sin(a) * d1); g.stroke(); }
+  hexPath(g, r * .56); fs(g, A(P.vir, P.dark ? .5 : .9), A(P.ink, .4), lw(r * .015));
+  g.strokeStyle = P.gold; g.lineWidth = lw(r * .03); for (let k = 0; k < 5; k++) { const a = -Math.PI / 2 + k / 5 * TAU; line(g, 0, -r * .4, Math.cos(a) * r * .12, -r * .4 + Math.sin(a) * r * .12); g.stroke(); }
+  dots(g, 40, inEll(R, 0, r * .03, r * .33, r * .33), r * .02, A(P.rna, .8));
+};
+D.amphora = (g, it, W, H, R) => {
+  const rx = W * .46, ry = H * .45;
+  g.beginPath(); g.moveTo(rx * .92, -ry * .25); g.bezierCurveTo(rx * .5, -ry * 1.05, -rx * 1.08, -ry * 1.05, -rx, 0); g.bezierCurveTo(-rx * 1.08, ry * 1.05, rx * .5, ry * 1.05, rx * .92, ry * .25); g.closePath();
+  fs(g, A(P.vir2, P.dark ? .25 : .55), P.vir, lw(H * .06));
+  ell(g, -rx * .05, 0, rx * .75, ry * .62); fs(g, A(P.vir, P.dark ? .2 : .3), null);
+  dots(g, 70, inEll(R, -rx * .05, 0, rx * .7, ry * .55), H * .012, A(P.rna, .7));
+  g.fillStyle = it.v.cork ? P.gold : P.bg; ell(g, rx * .93, 0, W * .025, ry * .24); g.fill();
+  if (it.v.cork) { g.strokeStyle = A(P.ink, .4); g.lineWidth = lw(H * .01); for (let k = -2; k <= 2; k++) { line(g, rx * .9, k * ry * .08, rx * .96, k * ry * .08); g.stroke(); } }
+};
+D.vesicle = (g, it, W, H, R) => {
+  const r = Math.min(W, H) / 2 * .92;
+  circ(g, 0, 0, r); fs(g, A(P.cyto, FA() * .6), P.lipid, lw(r * .12)); circ(g, 0, 0, r * .86); g.strokeStyle = A(P.gold, .6); g.lineWidth = lw(r * .03); g.stroke();
+  dots(g, 26, inEll(R, 0, 0, r * .7, r * .7), r * .05, P.gold);
+  for (let k = 0; k < 5; k++) { const a = R() * TAU; g.save(); g.rotate(a); g.fillStyle = P.vir; g.fillRect(r * .82, -r * .06, r * .28, r * .12); g.restore(); }
+};
+D.pore = (g, it, W, H) => {
+  const r = Math.min(W, H) / 2;
+  circ(g, 0, 0, r * .98); fs(g, A(P.nuc, P.dark ? .2 : .25), null);
+  for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; ell(g, Math.cos(a) * r * .66, Math.sin(a) * r * .66, r * .24, r * .16, a); fs(g, A(P.vir, P.dark ? .55 : .9), A(P.ink, .35), lw(r * .015)); ell(g, Math.cos(a + TAU / 16) * r * .9, Math.sin(a + TAU / 16) * r * .9, r * .09, r * .07, a); fs(g, P.vir2, null); }
+  circ(g, 0, 0, r * .36); fs(g, A(P.bg, .7), A(P.ink, .3), lw(r * .015));
+  g.strokeStyle = A(P.gold, .7); g.lineWidth = lw(r * .012);
+  const R = rng(9); for (let i = 0; i < 26; i++) { const a = R() * TAU, b = R() * TAU; line(g, Math.cos(a) * r * .34, Math.sin(a) * r * .34, Math.cos(b) * r * .1, Math.sin(b) * r * .1); g.stroke(); }
+};
+D.centriole = (g, it, W, H) => {
+  const w = W * .9, top = -H / 2 + w * .22, bot = H / 2 - w * .22;
+  g.beginPath(); g.moveTo(-w / 2, top); g.lineTo(-w / 2, bot); g.ellipse(0, bot, w / 2, w * .2, 0, Math.PI, 0, true); g.lineTo(w / 2, top); g.closePath();
+  fs(g, A(P.mem, P.dark ? .2 : .25), A(P.mem, .9), lw(W * .015));
+  for (let k = 0; k < 9; k++) { const a = Math.PI * (k + .5) / 9, x = -Math.cos(a) * w / 2 * .92; g.strokeStyle = A(P.mem, .4 + .5 * Math.sin(a)); g.lineWidth = lw(W * .045 * Math.sin(a)); line(g, x, top + w * .1 * Math.sin(a), x, bot + w * .18 * Math.sin(a)); g.stroke(); }
+  ell(g, 0, top, w / 2, w * .2); fs(g, A(P.bg, .55), A(P.mem, .9), lw(W * .015));
+  for (let k = 0; k < 9; k++) { const a = k / 9 * TAU - Math.PI / 2; for (let j = 0; j < 3; j++) { const rr = w / 2 * (.78 - j * .0), aa = a + j * .14; g.fillStyle = j ? P.mem : P.mito; circ(g, Math.cos(aa) * rr, top + Math.sin(aa) * rr * .4, W * .035); g.fill(); } }
+};
+D.lyso = (g, it, W, H, R) => {
+  const r = Math.min(W, H) / 2 * .95;
+  blob(g, 0, 0, r, r, R, .05, 10); fs(g, A(P.mito2, P.dark ? .3 : .55), P.mem, lw(r * .05));
+  dots(g, 50, inEll(R, 0, 0, r * .75, r * .75), r * .045, A(P.nuc2, .8));
+  for (let k = 0; k < 3; k++) { const [x, y] = inEll(R, 0, 0, r * .45, r * .45)(); blob(g, x, y, r * .18, r * .14, R, .2, 7); fs(g, A(P.gold, .6), null); }
+};
+D.perox = (g, it, W, H, R) => {
+  const r = Math.min(W, H) / 2 * .95;
+  circ(g, 0, 0, r); fs(g, A(P.green2, P.dark ? .25 : .35), P.mem, lw(r * .05));
+  dots(g, 60, inEll(R, 0, 0, r * .8, r * .8), r * .025, A(P.ink, .3));
+  g.save(); g.rotate(.35); g.beginPath(); g.rect(-r * .32, -r * .22, r * .64, r * .44); fs(g, A(P.gold, .8), A(P.ink, .4), lw(r * .02));
+  g.strokeStyle = A(P.ink, .35); g.lineWidth = lw(r * .01); for (let x = -r * .3; x < r * .32; x += r * .06) { line(g, x, -r * .22, x, r * .22); g.stroke(); } g.restore();
+};
+D.mito = (g, it, W, H, R) => {
+  const w = W * .96, h = H * .9;
+  stad(g, 0, 0, w, h); fs(g, A(P.mito, P.dark ? .35 : .75), P.mito2, lw(H * .04));
+  stad(g, 0, 0, w * .92, h * .8); fs(g, A(P.mito2, P.dark ? .25 : .35), A(P.mito2, .9), lw(H * .025));
+  if (W < 20) return;
+  g.save(); stad(g, 0, 0, w * .92, h * .8); g.clip();
+  const n = Math.max(4, Math.round(w / h * 4));
+  g.strokeStyle = P.dark ? P.mito2 : mix(P.mito2, "#ffffff", .1); g.lineCap = "round"; g.lineWidth = lw(H * .07);
+  for (let i = 0; i < n; i++) { const x = -w * .42 + (i + .5) / n * w * .84 + (R() - .5) * w / n * .3, up = i % 2 === 0, L = h * (.45 + R() * .2); g.beginPath(); g.moveTo(x, up ? -h * .4 : h * .4); g.quadraticCurveTo(x + (R() - .5) * h * .3, up ? -h * .4 + L * .5 : h * .4 - L * .5, x + (R() - .5) * h * .1, up ? -h * .4 + L : h * .4 - L); g.stroke(); }
+  g.restore();
+  dots(g, 14, inEll(R, 0, 0, w * .4, h * .3), H * .025, A(P.gold, .9));
+};
+D.golgi = (g, it, W, H, R) => {
+  const n = 6;
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1), y = -H * .32 + t * H * .6, w = W * (.62 + .2 * Math.sin(t * Math.PI)), bend = H * .2, th = H * .07;
+    g.beginPath(); g.moveTo(-w / 2, y + bend); g.quadraticCurveTo(0, y - bend, w / 2, y + bend); g.lineTo(w / 2, y + bend + th); g.quadraticCurveTo(0, y - bend + th, -w / 2, y + bend + th); g.closePath();
+    fs(g, A(i % 2 ? P.gold : P.lipid, P.dark ? .55 : .9), A(P.ink, .35), lw(H * .01));
+    for (let s = -1; s <= 1; s += 2) { g.fillStyle = A(P.gold, .85); circ(g, s * (w / 2 + H * .05), y + bend + th / 2 + (R() - .5) * H * .04, H * .04); g.fill(); }
+  }
+  dots(g, 10, () => [(R() - .5) * W * .9, H * (.32 + R() * .12)], H * .03, A(P.gold, .7));
+};
+D.chloro = (g, it, W, H, R) => {
+  ell(g, 0, 0, W * .48, H * .46); fs(g, A(P.green, P.dark ? .3 : .55), P.green2, lw(H * .035));
+  ell(g, 0, 0, W * .45, H * .42); g.strokeStyle = A(P.green2, .7); g.lineWidth = lw(H * .015); g.stroke();
+  if (W < 24) return;
+  g.save(); ell(g, 0, 0, W * .44, H * .41); g.clip();
+  g.strokeStyle = A(P.green2, .8); g.lineWidth = lw(H * .012);
+  for (let k = -2; k <= 2; k++) { line(g, -W * .45, k * H * .12, W * .45, k * H * .12 + H * .05); g.stroke(); }
+  const stacks = 9;
+  for (let i = 0; i < stacks; i++) {
+    const x = -W * .34 + (i % 5) * W * .17 + (i > 4 ? W * .08 : 0), y = i > 4 ? H * .12 : -H * .12, n = 4 + (i % 3);
+    for (let j = 0; j < n; j++) { g.beginPath(); g.roundRect(x - W * .05, y - n * H * .025 + j * H * .05, W * .1, H * .04, H * .02); fs(g, P.green2, A(P.ink, .2), lw(H * .005)); }
+  }
+  ell(g, W * .25, -H * .22, W * .06, H * .05); fs(g, A(P.bg, .8), null);
+  g.restore();
+};
+D.nucleus = (g, it, W, H, R) => {
+  blob(g, 0, 0, W * .48, H * .47, R, .04, 12); fs(g, A(P.nuc, P.dark ? .3 : .5), P.nuc2, lw(H * .02));
+  blob(g, 0, 0, W * .45, H * .44, rng(it.seed), .04, 12); g.strokeStyle = A(P.nuc2, .6); g.lineWidth = lw(H * .01); g.stroke();
+  if (W < 20) return;
+  for (let i = 0; i < 26; i++) { const a = i / 26 * TAU; g.fillStyle = P.bg; circ(g, Math.cos(a) * W * .465, Math.sin(a) * H * .455, H * .012); g.fill(); }
+  dots(g, 160, inEll(R, 0, 0, W * .4, H * .38), H * .012, A(P.nuc2, .75));
+  blob(g, W * .1, -H * .05, W * .13, H * .12, R, .2, 9); fs(g, P.nucl, null);
+};
+D.chrom = (g, it, W, H) => {
+  const arms = [[-.32, -.47, -.04, -.04], [.32, -.47, .04, -.04], [-.28, .47, -.04, .06], [.28, .47, .04, .06]];
+  g.lineCap = "round";
+  for (const [x1, y1, x0, y0] of arms) {
+    const X0 = x0 * W, Y0 = y0 * H, X1 = x1 * W, Y1 = y1 * H;
+    g.strokeStyle = A(P.nuc, P.dark ? .8 : .9); g.lineWidth = W * .3; line(g, X0, Y0, X1, Y1); g.stroke();
+    if (W > 24) { const n = 6; for (let k = 1; k < n; k++) { const t = k / n; if (k % 2) continue; g.strokeStyle = A(P.nucl, .65); g.lineWidth = W * .3; g.lineCap = "butt"; line(g, X0 + (X1 - X0) * (t - .05), Y0 + (Y1 - Y0) * (t - .05), X0 + (X1 - X0) * (t + .05), Y0 + (Y1 - Y0) * (t + .05)); g.stroke(); g.lineCap = "round"; } }
+  }
+  g.fillStyle = P.nucl; ell(g, 0, 0, W * .14, H * .05); g.fill();
+};
+function gramCol(gr) { return gr === "+" ? P.gpos : gr === "-" ? P.gneg : gr === "arch" ? P.gold : gr === "cyano" ? P.green : P.gneg; }
+function coccus(g, x, y, r, col, R) {
+  circ(g, x, y, r); const gr = g.createRadialGradient(x - r * .3, y - r * .35, r * .1, x, y, r); gr.addColorStop(0, A(mix(col, "#ffffff", .35), FA())); gr.addColorStop(1, A(col, FA()));
+  fs(g, gr, A(mix(col, "#000000", .3), .9), lw(r * .1));
+}
+D.coccus = (g, it, W, H, R) => {
+  const v = it.v, col = gramCol(v.gram);
+  if (v.arr === "single") { coccus(g, 0, 0, Math.min(W, H) * .48, col, R); return; }
+  if (v.arr === "tetrad") { const r = Math.min(W, H) * .245; [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => coccus(g, a * r * .98, b * r * .98, r, col, R)); return; }
+  if (v.arr === "chain") { const n = 6, r = W / n / 2 * .98; for (let i = 0; i < n; i++) coccus(g, -W / 2 + r + i * r * 2, Math.sin(i * 1.2) * H * .12, r, col, R); return; }
+  const r = Math.min(W, H) * .16, pts = [];
+  for (let i = 0; i < 16; i++) { let a = R() * TAU, d = Math.sqrt(R()) * Math.min(W, H) * .32; pts.push([Math.cos(a) * d, Math.sin(a) * d * .9]); }
+  pts.sort((a, b) => a[1] - b[1]).forEach(([x, y]) => coccus(g, x, y, r, col, R));
+};
+function flagella(g, pts, len, amp, col, w) { g.strokeStyle = col; g.lineWidth = w; g.lineCap = "round"; for (const [x, y, a] of pts) { wave(g, x, y, x + Math.cos(a) * len, y + Math.sin(a) * len, amp, 2.2, 0, 40); g.stroke(); } }
+D.rodb = (g, it, W, H, R) => {
+  const v = it.v, col = gramCol(v.gram), w = W * .98, h = H * .92;
+  const fw = lw(H * .035), fc = A(P.ink, .55);
+  if (v.flag === "peri") { const pts = []; for (let i = 0; i < 6; i++) { const t = (i + .5) / 6, up = i % 2 ? 1 : -1; pts.push([-w / 2 + t * w, up * h * .45, up * (Math.PI / 2 + (i < 3 ? .5 : -.5) + (R() - .5) * .4)]); } flagella(g, pts, h * .8, h * .1, fc, fw); }
+  if (v.flag === "polar") flagella(g, [[w / 2, 0, (R() - .5) * .4]], w * .6, h * .2, fc, fw);
+  g.save(); if (v.curve) { g.transform(1, v.curve, 0, 1, 0, 0); }
+  stad(g, 0, 0, w, h);
+  const gr = g.createLinearGradient(0, -h / 2, 0, h / 2); gr.addColorStop(0, A(mix(col, "#ffffff", .35), FA())); gr.addColorStop(1, A(col, FA()));
+  fs(g, gr, A(mix(col, "#000000", .3), .9), lw(H * (v.gram === "+" ? .1 : .05)));
+  if (W > 30) {
+    g.strokeStyle = A(P.nuc2, .45); g.lineWidth = lw(H * .05); wave(g, -w * .3, 0, w * .3, 0, h * .12, 3, 0, 40, false); g.stroke();
+    if (v.spore) { ell(g, w * .3, 0, w * .1, h * .28); fs(g, A(P.bg, .9), A(P.ink, .5), lw(H * .04)); }
+    if (v.waxy) { g.strokeStyle = A(P.gold, .6); g.lineWidth = lw(H * .04); stad(g, 0, 0, w * 1.02, h * 1.1); g.setLineDash([H * .2, H * .12]); g.stroke(); g.setLineDash([]); }
+  }
+  g.restore();
+};
+D.rodchain = (g, it, W, H, R) => { const n = 3, w = W / n * .96; for (let i = 0; i < n; i++) { g.save(); g.translate(-W / 2 + (i + .5) * W / n, Math.sin(i * 2) * H * .1); g.rotate((R() - .5) * .2); D.rodb(g, { v: { gram: it.v.gram, flag: "none" } }, w, H * .7, R); g.restore(); } };
+function bananaPath(g, w, h, bend) { g.beginPath(); g.moveTo(-w / 2, 0); g.quadraticCurveTo(0, -bend * 2 - h / 2, w / 2, 0); g.quadraticCurveTo(w / 2 + h * .2, h * .3, w / 2 - h * .3, h * .35); g.quadraticCurveTo(0, -bend * 2 + h / 2, -w / 2 + h * .3, h * .35); g.quadraticCurveTo(-w / 2 - h * .2, h * .3, -w / 2, 0); g.closePath(); }
+D.vibrio = (g, it, W, H, R) => {
+  const col = gramCol(it.v.gram), w = W * (it.v.flag ? .62 : .96), h = H * (it.v.slim ? .6 : .55), ox = it.v.flag ? -W * .18 : 0;
+  if (it.v.flag) flagella(g, [[ox + w / 2, h * .1, .1]], W * .42, H * .12, A(P.ink, .55), lw(H * .04));
+  g.save(); g.translate(ox, H * .1); bananaPath(g, w, h, H * .18); fs(g, A(col, FA()), A(mix(col, "#000000", .3), .9), lw(H * .04)); g.restore();
+};
+D.spiral = (g, it, W, H, R) => {
+  const col = gramCol(it.v.gram), body = W * .78, x0 = -W / 2 + W * .2;
+  flagella(g, [[x0, 0, Math.PI - .3], [x0, 0, Math.PI], [x0, 0, Math.PI + .3]], W * .2, H * .08, A(P.ink, .55), lw(H * .03));
+  g.lineCap = "round"; g.strokeStyle = A(col, P.dark ? .8 : .95); g.lineWidth = H * .26; wave(g, x0, 0, x0 + body, 0, H * .3, 2.5, 0, 60, false); g.stroke();
+  g.strokeStyle = A(mix(col, "#ffffff", .4), .5); g.lineWidth = H * .08; g.stroke();
+};
+D.spiro = (g, it, W, H) => { g.lineCap = "round"; g.strokeStyle = A(P.gneg, P.dark ? .85 : .95); g.lineWidth = Math.max(1, H * .35); wave(g, -W / 2 + H, 0, W / 2 - H, 0, H * .3, 12, 0, 300, false); g.stroke(); };
+D.myco = (g, it, W, H, R) => {
+  g.beginPath(); g.moveTo(-W * .45, 0); g.bezierCurveTo(-W * .45, -H * .6, W * .15, -H * .5, W * .3, -H * .12); g.lineTo(W * .48, -H * .05); g.lineTo(W * .48, H * .05); g.lineTo(W * .3, H * .12); g.bezierCurveTo(W * .15, H * .5, -W * .45, H * .6, -W * .45, 0); g.closePath();
+  fs(g, A(P.gneg, FA() * .8), A(P.mem, .9), lw(H * .02));
+  dots(g, 18, inEll(R, -W * .1, 0, W * .25, H * .25), H * .025, A(P.nuc2, .6));
+};
+D.square = (g, it, W, H, R) => {
+  g.beginPath(); g.roundRect(-W * .47, -H * .47, W * .94, H * .94, W * .04); fs(g, A(P.red, P.dark ? .3 : .45), P.red2, lw(W * .012));
+  for (let i = 0; i < 30; i++) { const x = (R() - .5) * W * .8, y = (R() - .5) * H * .8; ell(g, x, y, W * .035, W * .018, R() * Math.PI); fs(g, A(P.bg, .85), A(P.ink, .3), lw(W * .004)); }
+};
+D.filament = (g, it, W, H, R) => {
+  const n = 14, r = W / n / 2;
+  for (let i = 0; i < n; i++) { const x = -W / 2 + r + i * r * 2, y = Math.sin(i * .6) * H * .2, het = i === 5 || i === 11; circ(g, x, y, r * (het ? 1 : .95)); fs(g, het ? A(P.lipid, .9) : A(P.green, FA()), het ? P.gold : P.green2, lw(r * (het ? .2 : .08))); }
+};
+D.cigar = (g, it, W, H, R) => {
+  ell(g, 0, 0, W * .48, H * .42); fs(g, A(P.gpos, FA() * .7), P.gpos, lw(H * .02));
+  if (W < 20) return;
+  g.strokeStyle = A(P.gpos, .5); g.lineWidth = lw(H * .006); for (let i = 0; i < 90; i++) { const a = i / 90 * TAU; const x = Math.cos(a) * W * .48, y = Math.sin(a) * H * .42; line(g, x, y, x * 1.03, y * 1.12); g.stroke(); }
+  ell(g, -W * .17, 0, W * .17, H * .2); fs(g, A(P.gpos, .55), null); ell(g, W * .17, 0, W * .17, H * .2); fs(g, A(P.gpos, .55), null);
+};
+D.pearls = (g, it, W, H, R) => {
+  const r = W / 3 / 2 * .95;
+  g.beginPath(); g.roundRect(-W / 2, -r * 1.08, W, r * 2.16, r); fs(g, A(P.vir2, .18), A(P.vir2, .5), lw(r * .03));
+  for (let i = 0; i < 3; i++) { const x = -W / 2 + r * 1.05 + i * r * 2.05; circ(g, x, 0, r); fs(g, A(P.lipid, P.dark ? .25 : .5), P.gold, lw(r * .05)); dots(g, 70, () => { const a = R() * TAU, d = r * (.82 + R() * .14); return [x + Math.cos(a) * d, Math.sin(a) * d]; }, r * .04, P.dark ? "#ffffff" : "#fff8d8"); }
+};
+D.longfil = (g, it, W, H, R) => {
+  g.lineCap = "round"; g.strokeStyle = A(P.gneg, P.dark ? .8 : .9); g.lineWidth = Math.max(1, H * .35);
+  g.beginPath(); g.moveTo(-W / 2 + H, H * .1); g.bezierCurveTo(-W * .2, -H * .4, W * .2, H * .5, W / 2 - H, -H * .1); g.stroke();
+};
+D.platelet = (g, it, W, H, R) => { blob(g, 0, 0, W * .46, H * .44, R, .12, 9); fs(g, A(P.cyto2, FA()), P.mem, lw(H * .03)); dots(g, 14, inEll(R, 0, 0, W * .25, H * .22), H * .045, A(P.nuc, .85)); };
+D.rbc = (g, it, W, H) => {
+  const rx = W * .48, ry = H * .46;
+  ell(g, 0, 0, rx, ry); const gr = g.createRadialGradient(0, -ry * .1, ry * .1, 0, 0, rx); gr.addColorStop(0, A(mix(P.red, "#ffffff", .5), FA())); gr.addColorStop(.55, A(P.red, FA())); gr.addColorStop(1, A(P.red2, FA()));
+  fs(g, gr, A(P.red2, .8), lw(H * .015));
+  ell(g, 0, -ry * .08, rx * .48, ry * .42); fs(g, A(mix(P.red, "#ffffff", .55), P.dark ? .35 : .7), null);
+  ell(g, 0, ry * .05, rx * .55, ry * .45); g.strokeStyle = A(P.red2, .4); g.lineWidth = lw(H * .04); g.stroke();
+};
+function nucShape(g, kind, r, R) {
+  if (kind === "round") { blob(g, r * .06, r * .02, r * .72, r * .7, R, .05, 9); fs(g, A(P.nuc, P.dark ? .65 : .92), P.nuc2, lw(r * .02)); }
+  else if (kind === "kidney") { g.beginPath(); g.moveTo(-r * .55, -r * .2); g.bezierCurveTo(-r * .4, -r * .7, r * .5, -r * .6, r * .5, 0); g.bezierCurveTo(r * .5, r * .6, -r * .4, r * .7, -r * .55, r * .2); g.quadraticCurveTo(-r * .05, 0, -r * .55, -r * .2); g.closePath(); fs(g, A(P.nuc, P.dark ? .65 : .9), P.nuc2, lw(r * .02)); }
+  else {
+    const lobes = kind === "bi" ? [[-.3, -.05], [.3, .05]] : [[-.4, .1], [-.1, -.25], [.25, -.1], [.38, .25]];
+    g.strokeStyle = A(P.nuc, P.dark ? .65 : .9); g.lineWidth = r * .1; g.beginPath(); lobes.forEach(([x, y], i) => i ? g.lineTo(x * r, y * r) : g.moveTo(x * r, y * r)); g.stroke();
+    lobes.forEach(([x, y]) => { blob(g, x * r, y * r, r * .26, r * .22, R, .1, 8); fs(g, A(P.nuc, P.dark ? .65 : .92), P.nuc2, lw(r * .02)); });
+  }
+}
+D.wbc = (g, it, W, H, R) => {
+  const r = Math.min(W, H) / 2 * .96, v = it.v;
+  blob(g, 0, 0, r, r * .97, R, .04, 12); fs(g, A(P.cyto, FA()), P.mem, lw(r * .025));
+  if (r < 6) return;
+  if (v.gran === "fine") dots(g, 120, inEll(R, 0, 0, r * .85, r * .85), r * .02, A(P.mem, .5));
+  nucShape(g, v.nuc, r, R);
+  if (v.gran === "red") dots(g, 70, inEll(R, 0, 0, r * .85, r * .85), r * .05, A(P.red, .85));
+  if (v.gran === "dark") dots(g, 45, inEll(R, 0, 0, r * .8, r * .8), r * .07, A(P.nuc2, .9));
+};
+D.macro = (g, it, W, H, R) => {
+  blob(g, 0, 0, W * .46, H * .46, R, .3, 9); fs(g, A(P.cyto, FA()), P.mem, lw(H * .015));
+  if (W < 20) return;
+  for (let k = 0; k < 6; k++) { const [x, y] = inEll(R, 0, 0, W * .28, H * .28)(); circ(g, x, y, H * (.04 + R() * .05)); fs(g, A(P.bg, .7), A(P.mem, .5), lw(H * .006)); }
+  g.save(); g.translate(W * .12, -H * .12); g.rotate(.6); stad(g, 0, 0, H * .16, H * .07); fs(g, A(P.gneg, .9), null); g.restore();
+  g.save(); g.translate(-W * .1, H * .08); nucShape(g, "kidney", H * .26, R); g.restore();
+};
+D.hepato = (g, it, W, H, R) => {
+  const pts = []; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + .3, k = .9 + R() * .12; pts.push([Math.cos(a) * W * .47 * k, Math.sin(a) * H * .47 * k]); }
+  g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); fs(g, A(P.cyto2, FA()), P.mem, lw(H * .015));
+  if (W < 20) return;
+  dots(g, 90, inEll(R, 0, 0, W * .38, H * .38), H * .012, A(P.mem, .55));
+  [[-.17, -.05], [.17, .06]].forEach(([x, y]) => { circ(g, x * W, y * H, H * .13); fs(g, A(P.nuc, P.dark ? .6 : .85), P.nuc2, lw(H * .01)); circ(g, x * W + H * .03, y * H - H * .02, H * .03); fs(g, P.nucl, null); });
+};
+D.sperm = (g, it, W, H, R, T, F) => {
+  const hx = -W / 2 + W * .045, hl = W * .09, hh = H * .6;
+  const ph = F && !RM ? T * 5 : 0;
+  g.lineCap = "round"; g.strokeStyle = A(P.mem, .85);
+  const segs = 60, x0 = hx + hl * .55 + W * .08, x1 = W / 2;
+  for (let i = 0; i < segs; i++) { const t0 = i / segs, t1 = (i + 1) / segs; g.lineWidth = Math.max(.6, H * .1 * (1 - t0 * .8)); const y0 = Math.sin(t0 * 2.4 * TAU - ph) * H * .32 * t0, y1 = Math.sin(t1 * 2.4 * TAU - ph) * H * .32 * t1; line(g, x0 + (x1 - x0) * t0, y0, x0 + (x1 - x0) * t1, y1); g.stroke(); }
+  g.beginPath(); g.roundRect(hx + hl * .5, -H * .1, W * .085, H * .2, H * .1); fs(g, P.mito, null);
+  ell(g, hx, 0, hl / 2, hh / 2); fs(g, A(P.nuc, P.dark ? .7 : .9), P.nuc2, lw(H * .03));
+  g.beginPath(); g.ellipse(hx, 0, hl / 2, hh / 2, 0, Math.PI * .6, Math.PI * 1.4); g.closePath(); fs(g, A(P.vir2, .7), null);
+};
+D.epith = (g, it, W, H, R) => {
+  const pts = []; const n = 7; for (let i = 0; i < n; i++) { const a = i / n * TAU + R(), k = .78 + R() * .22; pts.push([Math.cos(a) * W * .48 * k, Math.sin(a) * H * .48 * k]); }
+  pts.sort((a, b) => Math.atan2(a[1], a[0]) - Math.atan2(b[1], b[0]));
+  g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); fs(g, A(P.cyto, P.dark ? .35 : .6), P.mem, lw(H * .008));
+  if (W < 24) return;
+  g.strokeStyle = A(P.mem, .3); g.lineWidth = lw(H * .004); for (let i = 0; i < 9; i++) { const [x, y] = inEll(R, 0, 0, W * .32, H * .32)(); wave(g, x, y, x + W * .15, y + (R() - .5) * H * .1, H * .01, 2, 0, 12, false); g.stroke(); }
+  circ(g, 0, 0, H * .07); fs(g, A(P.nuc, P.dark ? .7 : .9), P.nuc2, lw(H * .005));
+  dots(g, 40, inEll(R, W * .15, H * .1, W * .2, H * .15), H * .006, A(P.gpos, .8));
+};
+D.mega = (g, it, W, H, R) => {
+  const r = Math.min(W, H) / 2;
+  blob(g, 0, 0, r * .96, r * .94, R, .05, 14); fs(g, A(P.cyto2, FA()), P.mem, lw(r * .015));
+  if (r < 8) return;
+  dots(g, 160, inEll(R, 0, 0, r * .85, r * .85), r * .012, A(P.mem, .5));
+  for (let k = 0; k < 7; k++) { const a = k / 7 * TAU, d = r * .22; blob(g, Math.cos(a) * d, Math.sin(a) * d, r * .26, r * .22, R, .12, 8); fs(g, A(P.nuc, P.dark ? .6 : .9), P.nuc2, lw(r * .01)); }
+};
+D.fibro = (g, it, W, H, R) => {
+  g.strokeStyle = A(P.red, .35); g.lineWidth = lw(H * .015); for (let i = 0; i < 6; i++) { const y = (R() - .5) * H * .9; wave(g, -W / 2, y, W / 2, y + (R() - .5) * H * .3, H * .05, 2, R() * 6, 30, false); g.stroke(); }
+  g.beginPath(); g.moveTo(-W * .5, -H * .05); g.quadraticCurveTo(-W * .15, -H * .38, 0, -H * .3); g.quadraticCurveTo(W * .2, -H * .28, W * .3, -H * .45); g.quadraticCurveTo(W * .22, -H * .12, W * .5, H * .05); g.quadraticCurveTo(W * .1, H * .32, -W * .05, H * .28); g.quadraticCurveTo(-W * .2, H * .2, -W * .5, -H * .05); g.closePath();
+  fs(g, A(P.cyto, FA()), P.mem, lw(H * .02));
+  ell(g, -W * .02, 0, W * .1, H * .14, -.1); fs(g, A(P.nuc, P.dark ? .65 : .9), P.nuc2, lw(H * .01));
+};
+D.osteo = (g, it, W, H, R) => {
+  g.strokeStyle = A(P.golgi, .75); g.lineCap = "round";
+  for (let i = 0; i < 30; i++) { const a = R() * TAU; let x = Math.cos(a) * W * .14, y = Math.sin(a) * H * .14; const L = (.2 + R() * .3); g.lineWidth = lw(H * .012); g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 4; k++) { const aa = a + (R() - .5) * .9; x += Math.cos(aa) * W * L / 4; y += Math.sin(aa) * H * L / 4; g.lineTo(x, y); } g.stroke(); }
+  ell(g, 0, 0, W * .2, H * .16); fs(g, A(P.gold, P.dark ? .4 : .55), P.golgi, lw(H * .02));
+  ell(g, 0, 0, W * .1, H * .08); fs(g, A(P.nuc, .85), null);
+};
+D.cardio = (g, it, W, H, R) => {
+  const path = () => { g.beginPath(); g.moveTo(-W * .5, -H * .25); g.lineTo(W * .15, -H * .25); g.lineTo(W * .5, -H * .48); g.lineTo(W * .5, -H * .12); g.lineTo(W * .28, 0); g.lineTo(W * .5, H * .2); g.lineTo(W * .5, H * .45); g.lineTo(W * .15, H * .25); g.lineTo(-W * .5, H * .25); g.closePath(); };
+  path(); fs(g, A(P.red, P.dark ? .35 : .55), P.red2, lw(H * .02));
+  if (W > 30) { g.save(); path(); g.clip(); g.strokeStyle = A(P.red2, .7); g.lineWidth = lw(H * .012); const st = Math.max(2.5, W * .018); for (let x = -W / 2; x < W / 2; x += st) { line(g, x, -H / 2, x, H / 2); g.stroke(); } g.restore(); }
+  g.strokeStyle = P.gold; g.lineWidth = lw(H * .05); wave(g, -W * .5, -H * .25, -W * .5, H * .25, W * .01, 4, 0, 20, false); g.stroke();
+  ell(g, -W * .12, 0, W * .07, H * .1); fs(g, A(P.nuc, P.dark ? .7 : .9), P.nuc2, lw(H * .01));
+};
+D.adipo = (g, it, W, H, R) => {
+  const r = Math.min(W, H) / 2 * .96;
+  blob(g, 0, 0, r, r, R, .04, 10); fs(g, A(P.cyto, FA()), P.mem, lw(r * .02));
+  circ(g, -r * .04, r * .02, r * .88); const gr = g.createRadialGradient(-r * .3, -r * .3, r * .1, 0, 0, r); gr.addColorStop(0, A(mix(P.lipid, "#ffffff", .5), FA())); gr.addColorStop(1, A(P.lipid, FA())); fs(g, gr, A(P.gold, .6), lw(r * .01));
+  ell(g, r * .88, -r * .1, r * .09, r * .26, .1); fs(g, A(P.nuc, P.dark ? .7 : .9), null);
+};
+D.rodcell = (g, it, W, H) => {
+  const w = W * .9;
+  g.beginPath(); g.roundRect(-w / 2, -H * .48, w, H * .4, w * .3); fs(g, A(P.gpos, FA()), P.gpos, lw(w * .04));
+  if (H > 60) { g.strokeStyle = A(P.bg, .6); g.lineWidth = lw(H * .002); for (let y = -H * .46; y < -H * .09; y += Math.max(2, H * .01)) { line(g, -w * .4, y, w * .4, y); g.stroke(); } }
+  g.strokeStyle = P.mem; g.lineWidth = lw(w * .2); line(g, 0, -H * .08, 0, -H * .04); g.stroke();
+  g.beginPath(); g.roundRect(-w / 2, -H * .04, w, H * .22, w * .3); fs(g, A(P.mito, FA()), P.mito2, lw(w * .03));
+  ell(g, 0, H * .27, w * .5, H * .06); fs(g, A(P.nuc, P.dark ? .7 : .9), P.nuc2, lw(w * .03));
+  g.strokeStyle = A(P.mem, .9); g.lineWidth = lw(w * .2); line(g, 0, H * .33, 0, H * .45); g.stroke();
+  circ(g, 0, H * .46, w * .45); fs(g, A(P.gold, .9), null);
+};
+D.egg = (g, it, W, H, R) => {
+  const r = Math.min(W, H) / 2;
+  for (let i = 0; i < 34; i++) { const a = i / 34 * TAU + R() * .1; blob(g, Math.cos(a) * r * .9, Math.sin(a) * r * .9, r * .08, r * .06, R, .2, 7, a); fs(g, A(P.cyto2, FA() * .8), A(P.mem, .5), lw(r * .004)); }
+  circ(g, 0, 0, r * .8); fs(g, A(P.vir2, P.dark ? .15 : .35), A(P.vir2, .9), lw(r * .025));
+  circ(g, 0, 0, r * .66); fs(g, A(P.cyto, FA()), P.mem, lw(r * .01));
+  if (r < 10) return;
+  dots(g, 260, inEll(R, 0, 0, r * .62, r * .62), r * .008, A(P.mem, .45));
+  circ(g, -r * .2, -r * .15, r * .15); fs(g, A(P.nuc, P.dark ? .5 : .7), P.nuc2, lw(r * .008));
+  circ(g, r * .5, -r * .42, r * .07); fs(g, A(P.cyto2, FA()), P.mem, lw(r * .006));
+};
+D.smooth = (g, it, W, H) => { g.beginPath(); g.moveTo(-W / 2, 0); g.quadraticCurveTo(0, -H * .95, W / 2, 0); g.quadraticCurveTo(0, H * .95, -W / 2, 0); g.closePath(); fs(g, A(P.red, P.dark ? .35 : .5), P.red2, lw(H * .03)); ell(g, 0, 0, W * .12, H * .12); fs(g, A(P.nuc, P.dark ? .7 : .9), null); };
+function branch(g, x, y, a, len, w, depth, R, spread, fan) {
+  if (depth <= 0 || len < .6) return;
+  const x1 = x + Math.cos(a) * len, y1 = y + Math.sin(a) * len;
+  g.lineWidth = Math.max(.5, w); line(g, x, y, x1, y1); g.stroke();
+  const n = fan && depth > 2 ? 3 : 2;
+  for (let k = 0; k < n; k++) { const da = (k - (n - 1) / 2) * spread + (R() - .5) * spread * .6; branch(g, x1, y1, a + da, len * (.68 + R() * .14), w * .68, depth - 1, R, spread * .95, fan); }
+}
+D.neuron = (g, it, W, H, R) => {
+  g.strokeStyle = P.golgi; g.lineCap = "round"; const sy = H * .12, s = Math.min(W, H);
+  branch(g, 0, sy - s * .03, -Math.PI / 2, H * .2, s * .022, 7, R, .42, false);
+  for (let k = 0; k < 5; k++) branch(g, 0, sy + s * .02, Math.PI * (.15 + k * .17), H * .09, s * .014, 5, R, .6, false);
+  g.lineWidth = Math.max(.6, s * .006); g.beginPath(); g.moveTo(0, sy); g.quadraticCurveTo(s * .03, H * .3, -s * .02, H * .5); g.stroke();
+  g.beginPath(); g.moveTo(0, sy - s * .07); g.lineTo(s * .045, sy + s * .03); g.lineTo(-s * .045, sy + s * .03); g.closePath(); fs(g, P.golgi, null);
+};
+D.purkinje = (g, it, W, H, R) => {
+  g.strokeStyle = P.golgi; g.lineCap = "round"; const s = Math.min(W, H), sy = H * .32;
+  for (let k = 0; k < 2; k++) branch(g, 0, sy - s * .04, -Math.PI / 2 + (k - .5) * .5, H * .17, s * .02, 9, R, .55, false);
+  g.lineWidth = Math.max(.6, s * .008); line(g, 0, sy, 0, H * .5); g.stroke();
+  ell(g, 0, sy, s * .045, s * .055); fs(g, P.golgi, null);
+};
+D.muscle = (g, it, W, H, R) => {
+  const h = Math.max(1, H * .9);
+  g.beginPath(); g.roundRect(-W / 2, -h / 2, W, h, h / 2); fs(g, A(P.red, P.dark ? .45 : .65), P.red2, lw(Math.min(h * .05, 1.5)));
+  if (h < 14) return;
+  const sp = W / (.03 / 2.5e-6); if (sp >= 2.5) { g.save(); g.beginPath(); g.roundRect(-W / 2, -h / 2, W, h, h / 2); g.clip(); g.strokeStyle = A(P.red2, .6); g.lineWidth = lw(sp * .3); const vx0 = Math.max(-W / 2, -VIEW.cx - 50), vx1 = Math.min(W / 2, -VIEW.cx + VIEW.w + 50); for (let x = Math.ceil(vx0 / sp) * sp; x < vx1; x += sp) { line(g, x, -h / 2, x, h / 2); g.stroke(); } g.restore(); }
+  const nsp = W / 600; if (nsp > 6) { const vx0 = Math.max(-W / 2, -VIEW.cx - 50), vx1 = Math.min(W / 2, -VIEW.cx + VIEW.w + 50); for (let x = Math.ceil(vx0 / nsp) * nsp; x < vx1; x += nsp) { const up = Math.round(x / nsp) % 2 ? -1 : 1; ell(g, x, up * h * .38, Math.min(nsp * .3, h * .3), h * .06); fs(g, A(P.nuc, .85), null); } }
+};
+D.motoneuron = (g, it, W, H) => {
+  const y = 0, x0 = -W / 2 + Math.max(4, W * .004);
+  g.strokeStyle = P.golgi; g.lineCap = "round"; g.lineWidth = Math.max(1.4, H * .02); line(g, x0, y, W / 2 - W * .03, y); g.stroke();
+  if (W > 1500) { const sp = W / 1000; const vx0 = Math.max(-W / 2, -VIEW.cx - 50), vx1 = Math.min(W / 2, -VIEW.cx + VIEW.w + 50); g.strokeStyle = A(P.lipid, .9); g.lineWidth = Math.max(2.4, H * .05); for (let x = Math.ceil(vx0 / sp) * sp; x < vx1; x += sp) { line(g, x + sp * .05, y, x + sp * .95, y); g.stroke(); } }
+  const R = rng(4); g.strokeStyle = P.golgi; g.lineWidth = Math.max(1, H * .01); for (let k = 0; k < 7; k++) { const a = -.9 + k * .3; branch(g, W / 2 - W * .03, y, a, W * .008, Math.max(1, H * .01), 3, R, .5, false); }
+  const sr = Math.max(4, W * .00012); g.lineWidth = Math.max(1, sr * .25);
+  for (let k = 0; k < 6; k++) { const a = Math.PI * .6 + k * .45; branch(g, x0, y, a, sr * 2.5, sr * .3, 3, R, .5, false); }
+  circ(g, x0, y, sr); fs(g, P.golgi, null);
+};
+D.cocco = (g, it, W, H, R) => {
+  const r = Math.min(W, H) / 2 * .95;
+  circ(g, 0, 0, r * .8); fs(g, A(P.gold, P.dark ? .35 : .45), null);
+  for (let i = 0; i < 22; i++) { const a = R() * TAU, d = Math.sqrt(R()) * r * .62; const x = Math.cos(a) * d, y = Math.sin(a) * d; ell(g, x, y, r * .3, r * .22, a); fs(g, A(P.silica, P.dark ? .45 : .75), A(P.ink, .35), lw(r * .01)); if (r > 20) { g.strokeStyle = A(P.ink, .25); for (let k = 0; k < 10; k++) { const b = k / 10 * TAU; line(g, x, y, x + Math.cos(b) * r * .2, y + Math.sin(b) * r * .14); g.stroke(); } } }
+};
+D.chlorella = (g, it, W, H, R) => {
+  const r = Math.min(W, H) / 2 * .95;
+  circ(g, 0, 0, r); fs(g, A(P.cyto, FA() * .6), P.green2, lw(r * .05));
+  g.beginPath(); g.arc(0, 0, r * .85, -Math.PI * .1, Math.PI * 1.3); g.arc(-r * .1, r * .1, r * .45, Math.PI * 1.3, -Math.PI * .1, true); g.closePath(); fs(g, A(P.green, FA()), null);
+  circ(g, -r * .05, r * .5, r * .14); fs(g, A(P.gold, .8), null); circ(g, -r * .2, -r * .05, r * .16); fs(g, A(P.nuc, .8), null);
+};
+D.chlamy = (g, it, W, H, R, T, F) => {
+  const r = W * .42, cy = H * .5 - r * 1.05, ph = F && !RM ? Math.sin(T * 3) * .25 : 0;
+  g.strokeStyle = A(P.ink, .55); g.lineWidth = lw(r * .04); g.lineCap = "round";
+  for (const s of [-1, 1]) { g.beginPath(); g.moveTo(0, cy - r); g.quadraticCurveTo(s * r * (1.1 + ph), cy - r * 1.6, s * r * (.9 + ph), cy - r * 2.3); g.stroke(); }
+  ell(g, 0, cy, r * .85, r); fs(g, A(P.cyto, FA() * .6), P.green2, lw(r * .04));
+  g.beginPath(); g.ellipse(0, cy + r * .1, r * .75, r * .85, 0, -.2, Math.PI + .2); g.closePath(); fs(g, A(P.green, FA()), null);
+  circ(g, 0, cy + r * .45, r * .15); fs(g, A(P.gold, .9), null); circ(g, r * .62, cy - r * .2, r * .09); fs(g, P.red, null); circ(g, 0, cy - r * .35, r * .2); fs(g, A(P.nuc, .8), null);
+};
+D.giardia = (g, it, W, H, R) => {
+  g.strokeStyle = A(P.ink, .5); g.lineWidth = lw(W * .012); g.lineCap = "round";
+  for (let k = 0; k < 4; k++) { const s = k % 2 ? 1 : -1; wave(g, s * W * .05, H * .2, s * W * (.2 + k * .06), H * .5, W * .03, 1.5, k, 24); g.stroke(); }
+  g.beginPath(); g.moveTo(0, -H * .48); g.bezierCurveTo(W * .55, -H * .48, W * .45, H * .1, 0, H * .35); g.bezierCurveTo(-W * .45, H * .1, -W * .55, -H * .48, 0, -H * .48); g.closePath(); fs(g, A(P.vir2, FA() * .7), P.vir, lw(W * .015));
+  ell(g, 0, -H * .14, W * .36, H * .24); g.strokeStyle = A(P.vir, .5); g.lineWidth = lw(W * .01); g.stroke();
+  for (const s of [-1, 1]) { ell(g, s * W * .14, -H * .2, W * .08, H * .07); fs(g, A(P.nuc, .9), null); circ(g, s * W * .14, -H * .2, W * .02); fs(g, P.nucl, null); }
+  g.strokeStyle = A(P.nuc2, .8); g.lineWidth = lw(W * .03); g.beginPath(); g.arc(0, -H * .1, W * .12, Math.PI * .2, Math.PI * .8); g.stroke();
+};
+D.sporozoite = (g, it, W, H) => { g.save(); bananaPath(g, W * .96, H * .5, H * .12); fs(g, A(P.nuc2, P.dark ? .45 : .4), P.nuc2, lw(H * .04)); g.restore(); ell(g, 0, -H * .05, W * .07, H * .18); fs(g, A(P.red, .85), null); };
+D.trypano = (g, it, W, H, R, T, F) => {
+  const ph = F && !RM ? T * 4 : 0;
+  g.beginPath(); g.moveTo(-W * .45, H * .05); g.quadraticCurveTo(-W * .1, -H * .32, W * .3, -H * .05); g.quadraticCurveTo(-W * .1, H * .25, -W * .45, H * .05); g.closePath(); fs(g, A(P.gpos, P.dark ? .45 : .5), P.gpos, lw(H * .03));
+  g.strokeStyle = A(P.gpos, .9); g.lineWidth = lw(H * .04); g.beginPath(); for (let i = 0; i <= 40; i++) { const t = i / 40, x = -W * .4 + t * W * .9, y = -H * .14 - Math.sin(t * Math.PI) * H * .08 + Math.sin(t * 18 - ph) * H * .05; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+  ell(g, -W * .05, -H * .02, W * .05, H * .09); fs(g, A(P.nuc, .9), null); circ(g, -W * .33, H * .03, H * .04); fs(g, P.nucl, null);
+};
+D.euglena = (g, it, W, H, R, T, F) => {
+  g.strokeStyle = A(P.ink, .55); g.lineWidth = lw(H * .025); g.lineCap = "round"; wave(g, W * .42, -H * .05, W * .5, -H * .45, H * .05, 1.6, F && !RM ? T * 5 : 0, 20); g.stroke();
+  g.beginPath(); g.moveTo(-W * .5, H * .02); g.bezierCurveTo(-W * .2, -H * .55, W * .35, -H * .45, W * .44, -H * .05); g.bezierCurveTo(W * .35, H * .45, -W * .2, H * .5, -W * .5, H * .02); g.closePath(); fs(g, A(P.cyto, FA() * .55), P.green2, lw(H * .02));
+  if (W < 20) return;
+  g.save(); g.clip(); g.strokeStyle = A(P.green2, .3); g.lineWidth = lw(H * .01); for (let x = -W * .6; x < W * .6; x += H * .12) { line(g, x, -H / 2, x + H * .4, H / 2); g.stroke(); } g.restore();
+  for (let i = 0; i < 14; i++) { const [x, y] = inEll(R, -W * .02, 0, W * .3, H * .22)(); ell(g, x, y, H * .07, H * .035, R() * 3); fs(g, A(P.green, FA()), null); }
+  circ(g, W * .33, -H * .1, H * .05); fs(g, P.red, null); circ(g, -W * .05, H * .05, H * .1); fs(g, A(P.nuc, .8), null);
+};
+D.diatom = (g, it, W, H, R) => {
+  const r = Math.min(W, H) / 2 * .97;
+  circ(g, 0, 0, r); fs(g, A(P.silica, P.dark ? .2 : .25), P.silica, lw(r * .03)); circ(g, 0, 0, r * .9); g.strokeStyle = A(P.silica, .7); g.lineWidth = lw(r * .015); g.stroke();
+  if (r < 8) return;
+  const rings = Math.min(18, Math.floor(r / 3));
+  g.fillStyle = A(P.silica, P.dark ? .8 : .7);
+  for (let k = 1; k <= rings; k++) { const rr = r * .88 * k / rings, n = Math.max(6, Math.round(6 * k)); const pr = Math.max(.4, r * .88 / rings * .3); g.beginPath(); for (let i = 0; i < n; i++) { const a = i / n * TAU + k * .3; g.moveTo(Math.cos(a) * rr + pr, Math.sin(a) * rr); g.arc(Math.cos(a) * rr, Math.sin(a) * rr, pr, 0, TAU); } g.fill(); }
+  dots(g, 12, inEll(R, 0, 0, r * .6, r * .6), r * .06, A(P.gold, .6));
+};
+D.radiolaria = (g, it, W, H, R) => {
+  const r = Math.min(W, H) / 2;
+  g.strokeStyle = A(P.silica, .9); g.lineCap = "round";
+  for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + R() * .1; g.lineWidth = lw(r * .02); line(g, Math.cos(a) * r * .5, Math.sin(a) * r * .5, Math.cos(a) * r * .98, Math.sin(a) * r * .98); g.stroke(); }
+  circ(g, 0, 0, r * .52); fs(g, A(P.silica, P.dark ? .12 : .15), P.silica, lw(r * .02));
+  if (r < 10) return;
+  g.save(); circ(g, 0, 0, r * .5); g.clip(); g.strokeStyle = A(P.silica, .85); g.lineWidth = lw(r * .012);
+  const s = r * .12; for (let y = -r; y < r; y += s * .87) for (let x = -r; x < r; x += s) { const ox = (Math.round(y / (s * .87)) % 2) * s / 2; const cx = x + ox, d = Math.hypot(cx, y) / (r * .5), k = 1 - d * d * .4; g.beginPath(); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; const px = cx * (1 - d * .15) + Math.cos(a) * s * .42 * k, py = y * (1 - d * .15) + Math.sin(a) * s * .42 * k; i ? g.lineTo(px, py) : g.moveTo(px, py); } g.closePath(); g.stroke(); }
+  g.restore(); circ(g, 0, 0, r * .25); fs(g, A(P.gold, .5), null);
+};
+D.paramecium = (g, it, W, H, R, T, F) => {
+  const path = () => { g.beginPath(); g.moveTo(-W * .48, 0); g.bezierCurveTo(-W * .45, -H * .5, W * .35, -H * .55, W * .48, -H * .05); g.bezierCurveTo(W * .5, H * .3, W * .1, H * .25, 0, H * .2); g.quadraticCurveTo(-W * .1, H * .12, -W * .2, H * .32); g.bezierCurveTo(-W * .4, H * .45, -W * .5, H * .25, -W * .48, 0); g.closePath(); };
+  if (W > 40) { g.strokeStyle = A(P.ink, .35); g.lineWidth = lw(H * .008); const ph = F && !RM ? T * 6 : 0; for (let i = 0; i < 120; i++) { const a = i / 120 * TAU; const x = Math.cos(a) * W * .49, y = Math.sin(a) * H * .45, b = a + Math.sin(i * .5 + ph) * .4; line(g, x, y, x + Math.cos(b) * H * .06, y + Math.sin(b) * H * .06); g.stroke(); } }
+  path(); fs(g, A(P.cyto, FA() * .7), P.mem, lw(H * .02));
+  if (W < 24) return;
+  ell(g, 0, -H * .05, W * .14, H * .16, .2); fs(g, A(P.nuc, .85), null); circ(g, W * .12, -H * .12, H * .04); fs(g, P.nucl, null);
+  for (const x of [-W * .3, W * .3]) { g.strokeStyle = A(P.silica, .8); g.lineWidth = lw(H * .015); for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; line(g, x, -H * .1, x + Math.cos(a) * H * .12, -H * .1 + Math.sin(a) * H * .12); g.stroke(); } circ(g, x, -H * .1, H * .05); fs(g, A(P.silica, .6), null); }
+  for (let k = 0; k < 6; k++) { const [x, y] = inEll(R, 0, H * .02, W * .28, H * .2)(); circ(g, x, y, H * .05); fs(g, A(P.gold, .5), A(P.ink, .2), lw(H * .005)); }
+};
+D.foram = (g, it, W, H, R) => {
+  const r = Math.min(W, H) / 2;
+  g.strokeStyle = A(P.gold, .5); g.lineWidth = lw(r * .006);
+  for (let i = 0; i < 50; i++) { const a = R() * TAU; wave(g, Math.cos(a) * r * .5, Math.sin(a) * r * .5, Math.cos(a) * r, Math.sin(a) * r, r * .02, 2, R() * 6, 16, false); g.stroke(); }
+  for (let k = 0; k < 11; k++) { const a = k * .62, d = r * .05 + k * r * .036, cr = r * (.06 + k * .025); circ(g, Math.cos(a) * d, Math.sin(a) * d, cr); fs(g, A(P.lipid, FA()), P.gold, lw(r * .012)); }
+  dots(g, 40, inEll(R, 0, 0, r * .4, r * .4), r * .008, A(P.ink, .4));
+};
+D.amoeba = (g, it, W, H, R) => {
+  blob(g, 0, 0, W * .46, H * .44, R, .38, 8); fs(g, A(P.cyto, FA() * .7), P.mem, lw(H * .01));
+  if (W < 24) return;
+  blob(g, 0, 0, W * .3, H * .28, rng(it.seed + 3), .3, 8); fs(g, A(P.cyto2, FA() * .5), null);
+  dots(g, 200, inEll(R, 0, 0, W * .32, H * .3), H * .005, A(P.mem, .5));
+  ell(g, -W * .05, H * .02, W * .07, H * .06); fs(g, A(P.nuc, .85), null);
+  circ(g, W * .15, -H * .1, H * .06); fs(g, A(P.silica, .5), A(P.silica, .8), lw(H * .005));
+  for (let k = 0; k < 5; k++) { const [x, y] = inEll(R, 0, 0, W * .22, H * .2)(); circ(g, x, y, H * .03); fs(g, A(P.gold, .6), null); }
+};
+D.noctiluca = (g, it, W, H, R) => {
+  const r = Math.min(W, H) / 2 * .95;
+  g.strokeStyle = A(P.mem, .6); g.lineWidth = lw(r * .04); g.lineCap = "round"; g.beginPath(); g.moveTo(r * .1, r * .85); g.quadraticCurveTo(r * .35, r * 1.05, r * .2, r * 1.1); g.stroke();
+  circ(g, 0, 0, r); fs(g, A(P.silica, P.dark ? .1 : .18), A(P.silica, .8), lw(r * .015));
+  g.strokeStyle = A(P.mem, .4); g.lineWidth = lw(r * .006); for (let i = 0; i < 18; i++) { const a = R() * TAU; line(g, 0, r * .6, Math.cos(a) * r * .9, Math.sin(a) * r * .9); g.stroke(); }
+  blob(g, 0, r * .62, r * .22, r * .16, R, .2, 8); fs(g, A(P.cyto2, FA()), null);
+  dots(g, 90, inEll(R, 0, 0, r * .95, r * .95), r * .012, P.dark ? "#7ff6ff" : A(P.silica, .8));
+};
+D.volvox = (g, it, W, H, R) => {
+  const r = Math.min(W, H) / 2 * .97;
+  circ(g, 0, 0, r); fs(g, A(P.green, P.dark ? .08 : .1), A(P.green2, .7), lw(r * .01));
+  if (r > 10) { const n = Math.min(500, Math.round(r * 3)); g.fillStyle = A(P.green, .9); g.beginPath(); for (let i = 0; i < n; i++) { const y = 1 - 2 * (i + .5) / n, rr = Math.sqrt(1 - y * y), a = i * 2.39996; const x = Math.cos(a) * rr, z = Math.sin(a) * rr; if (z < -.1) continue; g.moveTo(x * r * .97 + r * .01, y * r * .97); g.arc(x * r * .97, y * r * .97, Math.max(.4, r * .011), 0, TAU); } g.fill(); }
+  [[-.3, -.2, .22], [.28, .1, .2], [-.05, .38, .17], [.15, -.38, .14]].forEach(([x, y, s]) => { circ(g, x * r, y * r, s * r); fs(g, A(P.green, FA() * .9), P.green2, lw(r * .008)); });
+};
+D.stentor = (g, it, W, H, R) => {
+  g.beginPath(); g.moveTo(-W * .48, -H * .42); g.bezierCurveTo(-W * .3, -H * .2, -W * .05, H * .2, -W * .02, H * .5); g.lineTo(W * .02, H * .5); g.bezierCurveTo(W * .05, H * .2, W * .3, -H * .2, W * .48, -H * .42); g.closePath();
+  fs(g, A(P.nuc, P.dark ? .3 : .35), P.nuc2, lw(W * .01));
+  if (W < 20) return;
+  g.save(); g.clip(); g.strokeStyle = A(P.nuc2, .5); g.lineWidth = lw(W * .006); for (let k = -10; k <= 10; k++) { g.beginPath(); g.moveTo(k * W * .05, -H * .45); g.quadraticCurveTo(k * W * .02, 0, 0, H * .5); g.stroke(); } g.restore();
+  ell(g, 0, -H * .42, W * .48, H * .06); fs(g, A(P.cyto, FA()), P.nuc2, lw(W * .015));
+  for (let k = 0; k < 7; k++) { circ(g, W * .08 - k * W * .012, -H * .25 + k * H * .06, W * .035); fs(g, A(P.nucl, .8), null); }
+};
+D.acetab = (g, it, W, H, R) => {
+  g.strokeStyle = A(P.green, P.dark ? .8 : .9); g.lineWidth = lw(W * .04); g.lineCap = "round"; line(g, 0, -H * .38, 0, H * .45); g.stroke();
+  g.lineWidth = lw(W * .02); for (let k = 0; k < 5; k++) { const a = Math.PI * (.2 + k * .15); line(g, 0, H * .45, Math.cos(a) * W * .2, H * .45 + Math.sin(a) * H * .04); g.stroke(); }
+  ell(g, 0, -H * .4, W * .48, H * .07); fs(g, A(P.green, FA()), P.green2, lw(W * .01));
+  g.strokeStyle = A(P.green2, .8); g.lineWidth = lw(W * .006); for (let k = 0; k < 28; k++) { const a = k / 28 * TAU; line(g, 0, -H * .4, Math.cos(a) * W * .48, -H * .4 + Math.sin(a) * H * .07); g.stroke(); }
+};
+D.xeno = (g, it, W, H, R) => {
+  for (let k = 0; k < 9; k++) { const [x, y] = inEll(R, 0, 0, W * .3, H * .28)(); blob(g, x, y, W * (.15 + R() * .1), H * (.15 + R() * .1), R, .3, 8); fs(g, A(P.gold, P.dark ? .35 : .55), A(P.golgi, .5), lw(H * .006)); }
+  dots(g, 400, inEll(R, 0, 0, W * .42, H * .4), Math.max(.5, H * .006), A(P.ink2, .55));
+};
+D.physarum = (g, it, W, H, R) => {
+  g.strokeStyle = A(P.lipid, P.dark ? .9 : 1); g.lineCap = "round";
+  const sx = -W * .35, sy = H * .1;
+  for (let k = 0; k < 9; k++) branch(g, sx, sy, -1 + k * .26, W * .2, H * .04, 5, R, .5, false);
+  blob(g, sx, sy, W * .08, H * .09, R, .3, 8); fs(g, P.lipid, null);
+  g.beginPath(); g.arc(sx, sy, W * .8, -1.1, .9); g.strokeStyle = A(P.lipid, .5); g.lineWidth = lw(H * .05); g.stroke();
+};
+D.pollen = (g, it, W, H, R) => {
+  const r = Math.min(W, H) / 2 * (it.v.kind === "spiky" ? .8 : .95), v = it.v;
+  if (v.kind === "smooth") { g.beginPath(); g.ellipse(0, 0, r, r * .62, 0, 0, TAU); fs(g, A(P.gold, FA()), A(P.golgi, .6), lw(r * .03)); ell(g, 0, 0, r * .2, r * .58); g.strokeStyle = A(P.golgi, .5); g.stroke(); line(g, -r * .95, 0, r * .95, 0); g.stroke(); return; }
+  g.fillStyle = A(P.gold, FA()); const n = v.big ? 46 : 32;
+  for (let i = 0; i < n; i++) { const a = i / n * TAU; g.beginPath(); g.moveTo(Math.cos(a - .07) * r * .95, Math.sin(a - .07) * r * .95); g.lineTo(Math.cos(a) * r * 1.22, Math.sin(a) * r * 1.22); g.lineTo(Math.cos(a + .07) * r * .95, Math.sin(a + .07) * r * .95); g.fill(); }
+  circ(g, 0, 0, r); const gr = g.createRadialGradient(-r * .3, -r * .3, r * .1, 0, 0, r); gr.addColorStop(0, A(mix(P.gold, "#ffffff", .4), FA())); gr.addColorStop(1, A(P.gold, FA())); fs(g, gr, A(P.golgi, .5), lw(r * .02));
+  if (r < 10) return;
+  for (let i = 0; i < (v.big ? 40 : 22); i++) { const a = R() * TAU, d = Math.sqrt(R()) * r * .82; const x = Math.cos(a) * d, y = Math.sin(a) * d; g.fillStyle = A(mix(P.gold, "#ffffff", .3), .95); g.beginPath(); g.moveTo(x - r * .04, y + r * .03); g.lineTo(x, y - r * .1); g.lineTo(x + r * .04, y + r * .03); g.fill(); }
+  for (let k = 0; k < 3; k++) { const a = k / 3 * TAU + .4; circ(g, Math.cos(a) * r * .5, Math.sin(a) * r * .5, r * .08); fs(g, A(P.golgi, .35), null); }
+};
+D.yeast = (g, it, W, H, R) => {
+  const r = H * .46;
+  ell(g, W * .3, -H * .12, r * .55, r * .5, .4); fs(g, A(P.lipid, FA()), A(P.gold, .9), lw(r * .04));
+  ell(g, -W * .1, H * .02, r * 1.05, r * .95, .3); fs(g, A(P.lipid, FA()), A(P.gold, .9), lw(r * .04));
+  circ(g, -W * .14, H * .05, r * .45); fs(g, A(P.silica, .25), A(P.silica, .5), lw(r * .02));
+  circ(g, W * .05, -H * .2, r * .2); fs(g, A(P.nuc, .8), null);
+  for (const [x, y] of [[-W * .4, -H * .2], [-W * .35, H * .3]]) { circ(g, x, y, r * .1); g.strokeStyle = A(P.gold, .9); g.lineWidth = lw(r * .04); g.stroke(); }
+};
+D.stoma = (g, it, W, H) => {
+  for (const s of [-1, 1]) { g.beginPath(); g.ellipse(0, 0, W * .48, H * .46, 0, s < 0 ? Math.PI / 2 : -Math.PI / 2, s < 0 ? Math.PI * 1.5 : Math.PI / 2); g.ellipse(0, 0, W * .1, H * .32, 0, s < 0 ? Math.PI * 1.5 : Math.PI / 2, s < 0 ? Math.PI / 2 : -Math.PI / 2, true); g.closePath(); fs(g, A(P.green, P.dark ? .35 : .45), P.green2, lw(H * .02)); const R = rng(s + 5); dots(g, 14, () => [s * W * (.2 + R() * .2), (R() - .5) * H * .6], H * .025, A(P.green2, .9)); ell(g, s * W * .3, 0, W * .05, H * .08); fs(g, A(P.nuc, .7), null); }
+  ell(g, 0, 0, W * .07, H * .28); fs(g, A(P.bg, .85), null);
+};
+D.penicillium = (g, it, W, H, R) => {
+  g.strokeStyle = A(P.silica, .85); g.lineCap = "round"; g.lineWidth = lw(W * .04); line(g, 0, H * .5, 0, -H * .05); g.stroke();
+  const tips = [];
+  for (let i = 0; i < 3; i++) { const a = -Math.PI / 2 + (i - 1) * .35; const x = Math.cos(a) * H * .1, y = -H * .05 + Math.sin(a) * H * .1; g.lineWidth = lw(W * .03); line(g, 0, -H * .05, x, y); g.stroke(); for (let j = 0; j < 3; j++) { const b = a + (j - 1) * .22, x2 = x + Math.cos(b) * H * .07, y2 = y + Math.sin(b) * H * .07; g.lineWidth = lw(W * .02); line(g, x, y, x2, y2); g.stroke(); tips.push([x2, y2, b]); } }
+  for (const [x, y, b] of tips) for (let k = 0; k < 7; k++) { circ(g, x + Math.cos(b) * k * W * .07, y + Math.sin(b) * k * W * .07, W * .035); fs(g, A(P.green2, P.dark ? .7 : .8), A(P.ink, .3), lw(W * .004)); }
+};
+D.pinepollen = (g, it, W, H, R) => {
+  for (const s of [-1, 1]) { circ(g, s * W * .25, H * .05, H * .42); fs(g, A(P.gold, P.dark ? .3 : .4), A(P.golgi, .5), lw(H * .015)); if (W > 30) { g.save(); circ(g, s * W * .25, H * .05, H * .4); g.clip(); g.strokeStyle = A(P.golgi, .3); g.lineWidth = lw(H * .008); for (let k = -10; k <= 10; k++) { line(g, s * W * .25 + k * H * .06, -H / 2, s * W * .25 + k * H * .06 + H * .1, H / 2); g.stroke(); line(g, s * W * .25 - H / 2, k * H * .06, s * W * .25 + H / 2, k * H * .06 + H * .05); g.stroke(); } g.restore(); } }
+  ell(g, 0, -H * .05, W * .28, H * .36); fs(g, A(P.gold, FA()), A(P.golgi, .6), lw(H * .02));
+};
+D.onion = (g, it, W, H, R) => {
+  g.beginPath(); g.rect(-W * .49, -H * .45, W * .98, H * .9); fs(g, A(P.cyto, P.dark ? .2 : .35), P.mem, lw(H * .05));
+  ell(g, W * .1, 0, H * .2, H * .17); fs(g, A(P.nuc, .85), P.nuc2, lw(H * .01)); circ(g, W * .1 + H * .05, -H * .04, H * .05); fs(g, P.nucl, null);
+  g.strokeStyle = A(P.mem, .35); g.lineWidth = lw(H * .01); for (let k = 0; k < 4; k++) { wave(g, W * .1, 0, -W * .45 + k * W * .25, (R() - .5) * H * .7, H * .05, 1.5, R() * 5, 20, false); g.stroke(); }
+};
+D.wolffia = (g, it, W, H, R) => { blob(g, 0, 0, W * .47, H * .45, R, .06, 10); const gr = g.createRadialGradient(-W * .15, -H * .15, 1, 0, 0, W * .5); gr.addColorStop(0, A(mix(P.green, "#ffffff", .3), FA())); gr.addColorStop(1, A(P.green, FA())); fs(g, gr, P.green2, lw(H * .02)); dots(g, 25, inEll(R, 0, 0, W * .35, H * .3), H * .02, A(P.green2, .6)); circ(g, W * .1, -H * .4, H * .06); fs(g, A(P.gold, .9), null); };
+D.tree = (g, it, W, H, R) => {
+  g.fillStyle = A(P.sil, .9); g.beginPath(); g.moveTo(-W * .08, H / 2); g.lineTo(-W * .04, -H * .3); g.lineTo(W * .04, -H * .3); g.lineTo(W * .08, H / 2); g.fill();
+  for (let k = 0; k < 14; k++) { const y = -H * .48 + k * H * .055, w = W * (.2 + .3 * Math.sin(Math.min(1, k / 9) * Math.PI / 2)); blob(g, (R() - .5) * W * .1, y, w, H * .05, R, .3, 8); g.fill(); }
+};
+D.armillaria = (g, it, W, H, R) => {
+  const gy = -H * .25;
+  g.fillStyle = A(P.sil, .7); g.beginPath(); g.moveTo(-W / 2, gy); for (let x = -W / 2; x <= W / 2; x += Math.max(2, W / 400)) g.lineTo(x, gy - H * (.01 + R() * .012)); g.lineTo(W / 2, gy); g.closePath(); g.fill();
+  g.fillStyle = A(P.ink2, .12); g.fillRect(-W / 2, gy, W, H * .75);
+  g.save(); g.beginPath(); g.rect(-W / 2, gy, W, H * .75); g.clip();
+  g.strokeStyle = A(P.gold, .85); g.lineCap = "round";
+  for (let k = 0; k < 9; k++) { const a = k < 5 ? Math.PI * (.04 + k * .03) : Math.PI * (.96 - (k - 5) * .03); branch(g, (R() - .5) * W * .25, gy + H * (.06 + R() * .1), a, W * .09, H * .018, 6, R, .45, false); }
+  g.restore();
+  for (let k = 0; k < 9; k++) { const x = (R() - .5) * W * .8, s2 = Math.max(1.5, H * .02); g.fillStyle = P.gold; g.beginPath(); g.ellipse(x, gy - s2 * 1.6, s2 * 1.2, s2 * .6, 0, Math.PI, 0); g.fill(); g.fillRect(x - s2 * .2, gy - s2 * 1.6, s2 * .4, s2 * 1.6); }
+};
+D.seagrass = (g, it, W, H, R) => {
+  g.fillStyle = A(P.silica, .12); g.fillRect(-W / 2, -H / 2, W, H);
+  g.fillStyle = A(P.green, P.dark ? .55 : .7); g.beginPath(); g.moveTo(-W / 2, H / 2); for (let x = -W / 2; x <= W / 2; x += Math.max(2, W / 300)) g.lineTo(x, H * (.1 + R() * .15 + .1 * Math.sin(x / W * 9))); g.lineTo(W / 2, H / 2); g.closePath(); g.fill();
+};
+
+/* ───────── stage ───────── */
+const cv = $("stage"), ctx = cv.getContext("2d");
+let VW = 0, VH = 0, DPR = 1, stageTop = 100, stageBot = 0;
+let t = 0, target = 0, tween = null, lastInput = 0, wheelSnapTimer = 0, dirty = true;
+let panelOpen = false, panelShift = 0, panelShiftTarget = 0;
+const VIEW = { cx: 0, w: 0 };
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  VW = cv.clientWidth; VH = cv.clientHeight;
+  cv.width = Math.round(VW * DPR); cv.height = Math.round(VH * DPR);
+  measureStage();
+  updatePanelShift();
+  dirty = true;
+}
+function measureStage() {
+  const cap = $("caption").getBoundingClientRect();
+  stageTop = (VW < 760 ? 128 : 112);
+  stageBot = VH - cap.top + 8;
+  dirty = true;
+}
+new ResizeObserver(measureStage).observe($("caption"));
+function updatePanelShift() { panelShiftTarget = panelOpen && VW > 760 ? Math.min(460, VW) / 2 : 0; }
+function stageRect() {
+  const ground = Math.max(stageTop + 140, VH - stageBot - 44);
+  return { w: VW - panelShift * 2, h: ground - stageTop - 40, cx: VW / 2 - panelShift, ground };
+}
+function stop(i, SR) {
+  const it = IT[i];
+  const k = Math.min(SR.h * .86 / it.h, SR.w * .6 / it.w);
+  return { cx: it.x + it.w / 2, lk: Math.log(k) };
+}
+function cam(tt, SR) {
+  const i = Math.max(0, Math.min(N - 1, Math.floor(tt))), u = tt - i;
+  const a = stop(i, SR), b = stop(Math.min(i + 1, N - 1), SR);
+  return { cx: a.cx + (b.cx - a.cx) * u, k: Math.exp(a.lk + (b.lk - a.lk) * u) };
+}
+function niceLen(m) { const e = Math.floor(Math.log10(m)), b = 10 ** e, f = m / b; return (f < 2 ? 1 : f < 5 ? 2 : 5) * b; }
+
+let T0 = performance.now(), TT = 0, lastFocus = -1;
+function draw() {
+  const g = ctx, SR = stageRect(), C = cam(t, SR), k = C.k;
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  g.fillStyle = P.bg; g.fillRect(0, 0, VW, VH);
+  const sx = wx => (wx - C.cx) * k + SR.cx, sy = wy => SR.ground + wy * k;
+  /* grid */
+  const minor = 10 ** Math.ceil(Math.log10(12 / k)), mpx = minor * k;
+  const fade = Math.min(1, (mpx - 12) / 60);
+  const wl = C.cx - SR.cx / k, wr = C.cx + (VW - SR.cx) / k, wt = -SR.ground / k, wb = (VH - SR.ground) / k;
+  for (const [step, al] of [[minor, .1 * fade], [minor * 10, .1 + .1 * fade]]) {
+    if (al <= .005) continue;
+    g.strokeStyle = A(P.grid, al); g.lineWidth = 1; g.beginPath();
+    for (let x = Math.ceil(wl / step) * step, n = 0; x < wr && n < 400; x += step, n++) { const X = Math.round(sx(x)) + .5; g.moveTo(X, 0); g.lineTo(X, VH); }
+    for (let y = Math.ceil(wt / step) * step, n = 0; y < wb && n < 400; y += step, n++) { const Y = Math.round(sy(y)) + .5; g.moveTo(0, Y); g.lineTo(VW, Y); }
+    g.stroke();
+  }
+  const gyS = sy(0);
+  g.strokeStyle = A(P.ground, .55); g.lineWidth = 1; g.beginPath(); g.moveTo(0, Math.round(gyS) + .5); g.lineTo(VW, Math.round(gyS) + .5); g.stroke();
+  /* items */
+  const fi = Math.round(t), labels = [];
+  for (let i = 0; i < N; i++) {
+    const it = IT[i], W = it.w * k, H = it.h * k;
+    if (W < .35 && H < .35) continue;
+    const x0 = sx(it.x);
+    if (x0 > VW + 40 || x0 + W < -40) continue;
+    const cx = x0 + W / 2, cy = gyS - H / 2;
+    if (cy - H / 2 > VH + 40 || cy + H / 2 < -40) continue;
+    if (W < 2.5 && H < 2.5) { g.fillStyle = chapColor(it.ci); g.beginPath(); g.arc(cx, gyS - 1.5, 1.5, 0, TAU); g.fill(); continue; }
+    g.save(); g.translate(cx, cy);
+    VIEW.cx = cx; VIEW.w = VW;
+    const F = i === fi && Math.abs(t - fi) < .02;
+    try { (D[it.v.t] || D.blobFallback)(g, it, W, H, rng(it.seed), TT, F); } catch (e) { console.warn(it.id, e); }
+    g.restore();
+    labels.push([it, x0, W, H, i === fi]);
+  }
+  /* labels */
+  g.textAlign = "center"; g.textBaseline = "top";
+  for (const [it, x0, W, H, foc] of labels) {
+    const mx = Math.max(W, H); if (mx < 26 && !foc) continue;
+    const a = foc ? 1 : Math.min(1, (mx - 26) / 40) * .85;
+    const slot = W + Math.max(it.w, it.h) * .32 * k;
+    g.font = `${foc ? 600 : 500} ${foc ? 14 : 12.5}px ${FB}`;
+    const tw = g.measureText(it.n).width;
+    if (!foc && tw > slot * .95) continue;
+    const cx = x0 + W / 2;
+    g.fillStyle = A(P.ink, a); g.fillText(it.n, cx, gyS + 10);
+    g.font = `400 ${foc ? 12 : 11}px ${FM}`; g.fillStyle = A(P.ink2, a); g.fillText(fmtSize(Math.max(it.w, it.h)), cx, gyS + (foc ? 28 : 26));
+  }
+  /* focus reticle + dimension line */
+  const fit = IT[fi];
+  if (Math.abs(t - fi) < .35) {
+    const a = 1 - Math.abs(t - fi) / .35, W = fit.w * k, H = fit.h * k, x0 = sx(fit.x), y0 = gyS - H, pad = 10, L = 12;
+    g.strokeStyle = A(P.glow, .85 * a); g.lineWidth = 1.5;
+    const corners = [[x0 - pad, y0 - pad, 1, 1], [x0 + W + pad, y0 - pad, -1, 1], [x0 - pad, gyS + pad - 6, 1, -1], [x0 + W + pad, gyS + pad - 6, -1, -1]];
+    for (const [x, y, dx, dy] of corners) { g.beginPath(); g.moveTo(x + dx * L, y); g.lineTo(x, y); g.lineTo(x, y + dy * L); g.stroke(); }
+    g.font = `600 12px ${FM}`; const lbl = fmtSize(Math.max(fit.w, fit.h));
+    if (fit.w >= fit.h) {
+      const yy = y0 - pad - 14; g.strokeStyle = A(P.ink2, .8 * a); g.lineWidth = 1; g.beginPath(); g.moveTo(x0, yy); g.lineTo(x0 + W, yy); g.moveTo(x0, yy - 5); g.lineTo(x0, yy + 5); g.moveTo(x0 + W, yy - 5); g.lineTo(x0 + W, yy + 5); g.stroke();
+      const tw = g.measureText(lbl).width + 12; g.fillStyle = P.bg; g.fillRect(x0 + W / 2 - tw / 2, yy - 9, tw, 18); g.fillStyle = A(P.ink, a); g.textBaseline = "middle"; g.fillText(lbl, x0 + W / 2, yy);
+    } else {
+      const xx = x0 + W + pad + 14; g.strokeStyle = A(P.ink2, .8 * a); g.lineWidth = 1; g.beginPath(); g.moveTo(xx, y0); g.lineTo(xx, gyS); g.moveTo(xx - 5, y0); g.lineTo(xx + 5, y0); g.moveTo(xx - 5, gyS); g.lineTo(xx + 5, gyS); g.stroke();
+      g.save(); g.translate(xx, y0 + H / 2); g.rotate(-Math.PI / 2); const tw = g.measureText(lbl).width + 12; g.fillStyle = P.bg; g.fillRect(-tw / 2, -9, tw, 18); g.fillStyle = A(P.ink, a); g.textBaseline = "middle"; g.fillText(lbl, 0, 0); g.restore();
+    }
+  }
+  /* instruments */
+  const L = niceLen(110 / k), px = L * k;
+  $("scaleBar").style.width = px.toFixed(1) + "px"; $("scaleLbl").textContent = fmtSize(L);
+  $("gridLbl").textContent = "клетка сетки " + fmtSize(minor * 10);
+  $("trackFov").textContent = "ширина кадра " + fmtSize(VW / k);
+  $("trackMarker").style.left = ((t + .5) / N * 100) + "%";
+  lastCam = C; lastSR = SR;
+}
+let lastCam = null, lastSR = null;
+D.blobFallback = (g, it, W, H, R) => { blob(g, 0, 0, W * .45, H * .45, R, .1, 10); fs(g, A(P.cyto, FA()), P.mem, 1); };
+
+/* ───────── loop ───────── */
+function setTarget(v, instant) {
+  target = Math.max(0, Math.min(N - 1, v)); tween = null;
+  if (instant || RM) { t = target; }
+  dirty = true;
+}
+function goTo(i, opts = {}) {
+  i = Math.max(0, Math.min(N - 1, Math.round(i)));
+  if (RM || opts.instant) { setTarget(i, true); return; }
+  const dist = Math.abs(i - t);
+  tween = { from: t, to: i, start: performance.now(), dur: Math.min(2400, 450 + Math.log2(1 + dist) * 320) };
+  target = i;
+}
+let prevNow = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, (now - prevNow) / 1000); prevNow = now; TT = (now - T0) / 1000;
+  let moving = false;
+  if (tween) {
+    const u = Math.min(1, (now - tween.start) / tween.dur), e = u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+    t = tween.from + (tween.to - tween.from) * e; moving = true; if (u >= 1) { t = tween.to; tween = null; }
+  } else if (Math.abs(target - t) > 1e-4) { t += (target - t) * (1 - Math.exp(-dt * 9)); moving = true; if (Math.abs(target - t) < 1e-4) t = target; }
+  if (Math.abs(panelShift - panelShiftTarget) > .5) { panelShift += (panelShiftTarget - panelShift) * (RM ? 1 : (1 - Math.exp(-dt * 10))); moving = true; } else panelShift = panelShiftTarget;
+  const fi = Math.round(t);
+  if (fi !== lastFocus) { lastFocus = fi; onFocus(fi); }
+  const animFocus = !RM && Math.abs(t - fi) < .02 && ["mol", "atom", "sperm", "chlamy", "trypano", "euglena", "paramecium"].includes(IT[fi].v.t);
+  if (moving || dirty || animFocus) { draw(); dirty = false; }
+  requestAnimationFrame(frame);
+}
+
+/* ───────── input ───────── */
+function userInput() { lastInput = performance.now(); stopTour(); hideHint(); }
+cv.addEventListener("wheel", e => {
+  e.preventDefault(); userInput();
+  let d = (Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX);
+  if (e.deltaMode === 1) d *= 32; else if (e.deltaMode === 2) d *= 400;
+  d = Math.max(-120, Math.min(120, d));
+  tween = null; target = Math.max(0, Math.min(N - 1, target + d * .006)); dirty = true;
+  clearTimeout(wheelSnapTimer); wheelSnapTimer = setTimeout(() => { target = Math.round(target); dirty = true; }, 200);
+}, { passive: false });
+let drag = null;
+cv.addEventListener("pointerdown", e => { drag = { x: e.clientX, y: e.clientY, t0: target, moved: false, id: e.pointerId, vx: 0, lx: e.clientX, lt: performance.now() }; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener("pointermove", e => {
+  if (!drag) { hoverTest(e); return; }
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (!drag.moved && Math.hypot(dx, dy) > 6) { drag.moved = true; cv.classList.add("dragging"); userInput(); }
+  if (drag.moved) {
+    const now = performance.now(); drag.vx = (e.clientX - drag.lx) / Math.max(1, now - drag.lt); drag.lx = e.clientX; drag.lt = now;
+    tween = null; target = Math.max(0, Math.min(N - 1, drag.t0 - (dx + (Math.abs(dy) > Math.abs(dx) ? dy : 0)) / 170)); t = target; dirty = true;
+  }
+});
+function endDrag(e) {
+  if (!drag) return; cv.classList.remove("dragging");
+  if (!drag.moved) { const hit = hitTest(e.clientX, e.clientY); if (hit != null) { userInput(); if (hit === Math.round(t)) openPanel(); else goTo(hit); } }
+  else { target = Math.max(0, Math.min(N - 1, Math.round(target - drag.vx * 2.2))); dirty = true; }
+  drag = null;
+}
+cv.addEventListener("pointerup", endDrag); cv.addEventListener("pointercancel", endDrag);
+function hitTest(px, py) {
+  if (!lastCam) return null; const C = lastCam, SR = lastSR, k = C.k; let best = null, ba = Infinity;
+  const gy = SR.ground;
+  for (let i = 0; i < N; i++) { const it = IT[i], W = it.w * k, H = it.h * k; if (Math.max(W, H) < 6) continue; const x0 = (it.x - C.cx) * k + SR.cx; const pad = Math.max(4, Math.min(16, W * .1)); if (px >= x0 - pad && px <= x0 + W + pad && py >= gy - H - pad && py <= gy + 30) { const ar = W * H; if (ar < ba) { ba = ar; best = i; } } }
+  return best;
+}
+function hoverTest(e) { const h = hitTest(e.clientX, e.clientY); cv.classList.toggle("hover", h != null); }
+addEventListener("keydown", e => {
+  if (e.target.closest && e.target.closest("input,select,textarea")) { if (e.key === "Escape") closeCatalog(); return; }
+  const k = e.key;
+  if (catOpen) { if (k === "Escape") closeCatalog(); return; }
+  if (k === "ArrowRight" || k === "ArrowDown" || k === "PageDown") { e.preventDefault(); userInput(); goTo(Math.round(target) + 1); }
+  else if (k === "ArrowLeft" || k === "ArrowUp" || k === "PageUp") { e.preventDefault(); userInput(); goTo(Math.round(target) - 1); }
+  else if (k === "Home") { userInput(); goTo(0); } else if (k === "End") { userInput(); goTo(N - 1); }
+  else if (k === "Enter" && e.target === document.body) { openPanel(); }
+  else if (k === "Escape") { closePanel(); }
+  else if (k === "/" || (k === "k" && (e.ctrlKey || e.metaKey))) { e.preventDefault(); openCatalog(); }
+});
+
+/* ───────── track ───────── */
+const trackRow = $("trackRow");
+CH.forEach((c, ci) => { const s = document.createElement("div"); s.className = "seg"; s.style.flexGrow = c.count; s.title = c.name; s.dataset.ci = ci; trackRow.insertBefore(s, $("trackMarker")); });
+function paintTrack() { [...trackRow.querySelectorAll(".seg")].forEach(s => s.style.setProperty("--seg", chapColor(+s.dataset.ci))); }
+let trackDrag = false;
+function trackPos(e) { const r = trackRow.getBoundingClientRect(); return Math.max(0, Math.min(N - 1, (e.clientX - r.left) / r.width * N - .5)); }
+trackRow.addEventListener("pointerdown", e => { trackDrag = true; trackRow.setPointerCapture(e.pointerId); userInput(); setTarget(trackPos(e)); t = target; });
+trackRow.addEventListener("pointermove", e => { if (trackDrag) { setTarget(trackPos(e)); t = target; } });
+trackRow.addEventListener("pointerup", e => { trackDrag = false; goTo(Math.round(target)); });
+
+/* ───────── caption ───────── */
+function onFocus(i) {
+  const it = IT[i], c = CH[it.ci];
+  $("caption").style.setProperty("--chap", chapColor(it.ci));
+  $("capChap").textContent = c.name; $("capIdx").textContent = (i + 1) + " / " + N;
+  $("capName").textContent = it.n; $("capSize").textContent = fmtSize(sizeOf(it));
+  $("capEn").textContent = it.en; $("capLead").textContent = it.lead;
+  $("trackChap").innerHTML = ""; const b = document.createElement("b"); b.textContent = c.name; $("trackChap").append(b, el("span", { class: "blurb", text: " · " + c.blurb.split(".")[0] }));
+  [...trackRow.querySelectorAll(".seg")].forEach(s => s.classList.toggle("on", +s.dataset.ci === it.ci));
+  try { history.replaceState(null, "", "#" + it.id); } catch (e) { }
+  if (panelOpen) { clearTimeout(panelTimer); panelTimer = setTimeout(() => fillPanel(Math.round(t)), tween ? 260 : 60); }
+}
+let panelTimer = 0;
+$("capPrev").onclick = $("capPrev2").onclick = () => { userInput(); goTo(Math.round(target) - 1); };
+$("capNext").onclick = $("capNext2").onclick = () => { userInput(); goTo(Math.round(target) + 1); };
+$("capMore").onclick = () => openPanel();
+let hintGone = false; function hideHint() { if (!hintGone) { hintGone = true; $("hint").classList.add("gone"); } }
+
+/* ───────── tour / random / mode ───────── */
+let tourTimer = 0, touring = false;
+function stopTour() { if (!touring) return; touring = false; clearInterval(tourTimer); $("btnTour").setAttribute("aria-pressed", "false"); $("tourIcon").setAttribute("d", "M8 5.5v13l11-6.5z"); }
+$("btnTour").onclick = () => {
+  if (touring) { stopTour(); return; }
+  touring = true; hideHint(); $("btnTour").setAttribute("aria-pressed", "true"); $("tourIcon").setAttribute("d", "M7 5h4v14H7zM13 5h4v14h-4z");
+  const step = () => { const n = Math.round(target) + 1; if (n >= N) { stopTour(); return; } tween = { from: t, to: n, start: performance.now(), dur: RM ? 1 : 1100 }; target = n; };
+  step(); tourTimer = setInterval(step, 3200);
+};
+$("btnRand").onclick = () => { userInput(); let r; do { r = Math.floor(Math.random() * N); } while (r === Math.round(t)); goTo(r); };
+function applyModeLabel() { $("modeLbl").textContent = isDark() ? "Светлое поле" : "Флуоресценция"; $("btnMode").title = isDark() ? "Переключить на светлое поле" : "Переключить на флуоресценцию"; }
+$("btnMode").onclick = () => {
+  const next = isDark() ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  try { localStorage.setItem("atlas-mode", next); } catch (e) { }
+  themeChanged();
+};
+function themeChanged() { readPalette(); paintTrack(); applyModeLabel(); onFocus(Math.round(t)); dirty = true; if (panelOpen) { fillPanel(Math.round(t), true); if (viewer) { viewer.setBackgroundColor(parseInt(P.bg.slice(1), 16), 1); viewer.render(); } } drawCmp(); refreshAllThumbs(); }
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", themeChanged);
+new MutationObserver(m => { if (m.some(r => r.attributeName === "data-theme")) themeChanged(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+/* ───────── panel ───────── */
+const panel = $("panel");
+$("app").addEventListener("scroll", e => { const a = e.currentTarget; if (a.scrollLeft || a.scrollTop) { a.scrollLeft = 0; a.scrollTop = 0; } });
+let panelItem = -1;
+function openPanel() { if (!panelOpen) { panelOpen = true; panel.classList.add("open"); updatePanelShift(); $("caption").classList.add("hide"); hideHint(); } fillPanel(Math.round(t)); }
+function closePanel() { if (!panelOpen) return; panelOpen = false; panel.classList.remove("open"); updatePanelShift(); $("caption").classList.remove("hide"); stopMedia(); dirty = true; }
+$("pClose").onclick = closePanel;
+$("pPrev").onclick = () => { goTo(Math.round(target) - 1); };
+$("pNext").onclick = () => { goTo(Math.round(target) + 1); };
+
+let mediaMode = null, viewer = null, v3dReady = null, styleKey = null, spinOn = !RM, bohrRAF = 0;
+function stopMedia() { cancelAnimationFrame(bohrRAF); if (viewer) { try { viewer.spin(false); } catch (e) { } } }
+function load3Dmol() {
+  if (v3dReady) return v3dReady;
+  v3dReady = new Promise((res, rej) => { const s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/3dmol@2.4.2/build/3Dmol-min.js"; s.onload = () => res(window.$3Dmol); s.onerror = rej; document.head.appendChild(s); });
+  return v3dReady;
+}
+function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const k in attrs) { if (k === "class") e.className = attrs[k]; else if (k === "text") e.textContent = attrs[k]; else e.setAttribute(k, attrs[k]); } kids.forEach(k => k != null && e.append(k)); return e; }
+
+function fillPanel(i, keepMedia) {
+  const it = IT[i], c = CH[it.ci];
+  panel.style.setProperty("--chap", chapColor(it.ci));
+  $("pChap").textContent = c.name;
+  $("pName").textContent = it.n; $("pEn").textContent = it.en;
+  $("pSize").textContent = fmtSize(sizeOf(it)); $("pSizeNote").textContent = it.sd || (it.m ? "наибольший размер с учётом ван-дер-ваальсовых радиусов атомов" : "");
+  $("pDesc").textContent = it.d;
+  const fl = $("pFacts"); fl.innerHTML = ""; (it.f || []).forEach(f => fl.append(el("li", { text: f }))); $("secFacts").hidden = !(it.f && it.f.length);
+  fillProps(it); fillCmp(it); fillSources(it);
+  const changed = panelItem !== i; panelItem = i;
+  if (changed || !keepMedia) setupMedia(it);
+  else if (mediaMode === "draw" || mediaMode === "bohr") setupMedia(it, mediaMode);
+  if (changed) { $("pScroll").scrollTop = 0; if (!cmpUser) { cmpPick = i > 0 ? i - 1 : 1; } $("cmpSel").value = String(cmpPick); }
+  drawCmp();
+}
+function fillProps(it) {
+  const dl = $("pProps"); dl.innerHTML = ""; const add = (k, v) => { dl.append(el("dt", { text: k }), v instanceof Node ? el("dd", {}, v) : el("dd", { text: v })); };
+  const p = it.p || {};
+  if (it.v.t === "atom") {
+    add("Атомный номер", String(p.Z)); add("Атомная масса", nf(p.mass, 6) + " а. е. м."); add("Электронная конфигурация", p.conf); add("Электроны по оболочкам", p.shells.join(" · ")); add("Доля в массе тела", p.body);
+    add("Ван-дер-ваальсов диаметр", fmtSize(it.s));
+  }
+  if (p.code) {
+    add("Обозначение", p.code); add("Боковая цепь", p.cls); add("Незаменимая", p.ess ? "да — нужна с пищей" : "нет — синтезируется в организме");
+    const cd = el("div", { class: "codons" }); p.cod.split(" ").forEach((x, j, arr) => { if (/^[ACGU]{3}$/.test(x)) cd.append(el("span", { text: x })); else if (x) cd.append(document.createTextNode(" " + x)); }); add("Кодоны мРНК", cd);
+  }
+  if (it.m) { add("Формула", it.m.formula); add("Молярная масса", nf(it.m.mass, 5) + " г/моль"); add("Атомов", String(it.m.e.length)); if (it.m.flat) add("Модель", "плоская (2D), трёхмерных координат нет"); }
+  if (it.pdbid) add("Структура PDB", it.pdbid);
+  if (it.pdb && it.pdbbb) add("3D-модель", "упрощена до остова белка");
+  $("secProps").hidden = !dl.children.length;
+}
+const REFS = [
+  { s: 2.4e-10, g: "атома водорода" }, { s: 1e-9, g: "молекулы глюкозы" }, { s: 3e-8, g: "рибосомы" }, { s: 1.2e-7, g: "коронавируса" },
+  { s: 2e-6, g: "кишечной палочки" }, { s: 7.5e-6, g: "эритроцита" }, { s: 8e-5, g: "толщины волоса" }, { s: 5e-4, g: "песчинки" }, { s: 6e-3, g: "рисового зерна" },
+  { s: 1.75, g: "человека" }, { s: 105, g: "футбольного поля" }, { s: 8849, g: "высоты Эвереста" }];
+function fillCmp(it) {
+  const ul = $("pCmp"); ul.innerHTML = ""; const s = sizeOf(it);
+  const big = REFS.filter(r => r.s > s * 1.6), small = REFS.filter(r => r.s * 1.6 < s);
+  const add = (pre, val, post) => { const li = el("li"); li.append(pre, el("b", { text: val }), post); ul.append(li); };
+  if (small.length) { const r = small[small.length - 1]; add("в ", fmtRatio(s / r.s) + " раз", " больше " + r.g); }
+  if (small.length > 2) { const r = small[0]; add("в ", fmtRatio(s / r.s) + " раз", " больше " + r.g); }
+  if (big.length) { const r = big[0]; add("в ", fmtRatio(r.s / s) + " раз", " меньше " + r.g); }
+  if (s < 1e-3) add("в ряд на 1 мм поместится ", fmtRatio(1e-3 / s), " штук");
+  else if (s > 3) add("это примерно ", fmtRatio(s / 1.75), " человеческих ростов");
+}
+function fillSources(it) {
+  const ul = $("pSrc"); ul.innerHTML = "";
+  const link = (txt, href, note) => { const li = el("li"); li.append(el("a", { href, target: "_blank", rel: "noopener", text: txt })); if (note) li.append(el("span", { class: "muted", text: " · " + note })); ul.append(li); };
+  link("Википедия (рус.)", "https://ru.wikipedia.org/w/index.php?search=" + encodeURIComponent(it.n.replace(/[«»]/g, "")));
+  if (it.wiki) link("Wikipedia (англ.)", it.wiki);
+  if (it.pc) link("PubChem — " + it.pc, "https://pubchem.ncbi.nlm.nih.gov/compound/" + encodeURIComponent(it.pc), "3D-координаты");
+  else if (it.lig) link("RCSB PDB — лиганд " + it.lig, "https://www.rcsb.org/ligand/" + it.lig, "3D-координаты");
+  if (it.pdbid) link("RCSB PDB — " + it.pdbid, "https://www.rcsb.org/structure/" + it.pdbid, "структура и изображение");
+  if (it.ph) link("Фото: " + (it.ph.file || "Wikimedia Commons"), it.ph.page || "https://commons.wikimedia.org", [it.ph.artist, it.ph.license].filter(Boolean).join(", "));
+  if (it.sil) link("Силуэт: PhyloPic", it.sil.page || "https://www.phylopic.org", [it.sil.who, it.sil.license].filter(Boolean).join(", "));
+}
+
+/* media */
+function setupMedia(it, prefer) {
+  stopMedia();
+  const tabs = [];
+  if (it.m || it.pdb) tabs.push(["3d", "3D-модель"]);
+  if (it.v.t === "atom") tabs.push(["bohr", "Модель атома"]);
+  if (it.ph) tabs.push(["photo", "Фото"]);
+  if (!it.m && it.v.t !== "atom") tabs.push(["draw", it.pi || it.sil ? "Изображение" : "Схема"]);
+  const tb = $("mTabs"); tb.innerHTML = "";
+  tabs.forEach(([k, l]) => { const b = el("button", { role: "tab", "aria-selected": "false", text: l }); b.dataset.k = k; b.onclick = () => showMedia(it, k); tb.append(b); });
+  tb.hidden = tabs.length < 2;
+  showMedia(it, prefer && tabs.some(x => x[0] === prefer) ? prefer : tabs[0][0]);
+}
+function showMedia(it, k) {
+  stopMedia(); mediaMode = k;
+  [...$("mTabs").children].forEach(b => b.setAttribute("aria-selected", String(b.dataset.k === k)));
+  $("v3d").hidden = k !== "3d"; $("mPhoto").hidden = k !== "photo"; $("mDraw").hidden = !(k === "draw" || k === "bohr");
+  $("mStatus").hidden = true; $("mTools").hidden = true; $("mLegend").hidden = true;
+  if (k === "photo") {
+    $("mImg").src = it.ph.src; $("mImg").alt = it.n;
+    const cap = $("mCap"); cap.innerHTML = ""; cap.append("Фото: " + [it.ph.artist || "автор не указан", it.ph.license].filter(Boolean).join(" · ") + " · ");
+    cap.append(el("a", { href: it.ph.page || "#", target: "_blank", rel: "noopener", text: "Wikimedia Commons" }));
+  } else if (k === "draw" || k === "bohr") { drawMedia(it, k); }
+  else if (k === "3d") { show3D(it); }
+}
+function drawMedia(it, k) {
+  const c = $("mDraw"), r = c.getBoundingClientRect(); const dpr = Math.min(2, devicePixelRatio || 1);
+  c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
+  const g = c.getContext("2d");
+  const loop = () => {
+    const T = performance.now() / 1000;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height);
+    if (k === "bohr") drawBohr(g, it, r.width, r.height, T);
+    else {
+      const ar = it.w / it.h, maxW = r.width * .86, maxH = r.height * .8; let W = maxW, H = W / ar; if (H > maxH) { H = maxH; W = H * ar; }
+      g.save(); g.translate(r.width / 2, r.height / 2); VIEW.cx = r.width / 2; VIEW.w = r.width;
+      (D[it.v.t] || D.blobFallback)(g, it, W, H, rng(it.seed), T, true); g.restore();
+    }
+    if (!RM && (k === "bohr" || ["sperm", "chlamy", "trypano", "euglena", "paramecium"].includes(it.v.t))) bohrRAF = requestAnimationFrame(loop);
+  };
+  loop();
+}
+function drawBohr(g, it, w, h, T) {
+  const p = it.p, sh = p.shells, n = sh.length, cx = w / 2, cy = h / 2, R = Math.min(w, h) * .44, col = elShade(it.v.sym).b;
+  const gr = g.createRadialGradient(cx, cy, 0, cx, cy, R); gr.addColorStop(0, A(col, .3)); gr.addColorStop(1, A(col, 0)); g.fillStyle = gr; circ(g, cx, cy, R); g.fill();
+  for (let j = 0; j < n; j++) {
+    const rr = R * (.28 + .7 * (j + 1) / n); g.strokeStyle = A(P.ink, .3); g.lineWidth = 1; circ(g, cx, cy, rr); g.stroke();
+    const cnt = sh[j], sp = RM ? j * .5 : T * (1.2 / (j + 1)) + j * .5;
+    for (let e = 0; e < cnt; e++) { const a = sp + e / cnt * TAU; g.fillStyle = P.dark ? "#ffffff" : P.accentHex || P.ink; circ(g, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, cnt > 14 ? 2.6 : 3.6); g.fill(); }
+  }
+  const Rn = Math.max(9, R * .12), Rr = rng(p.Z * 7), np = Math.min(p.Z, 30), nn = Math.min(Math.round(p.mass) - p.Z, 34);
+  const pr = Rn / Math.sqrt(np + nn) * 1.1;
+  const pts = []; for (let i = 0; i < np + nn; i++) { const a = Rr() * TAU, d = Math.sqrt(Rr()) * (Rn - pr); pts.push([cx + Math.cos(a) * d, cy + Math.sin(a) * d, i < np]); }
+  pts.forEach(([x, y, isP]) => { g.fillStyle = isP ? P.red : P.vir2; circ(g, x, y, pr); g.fill(); g.strokeStyle = A(P.ink, .35); g.lineWidth = .7; g.stroke(); });
+  g.font = `400 ${Math.round(R * .2)}px ${FD}`; g.textAlign = "left"; g.textBaseline = "top"; g.fillStyle = P.ink; g.fillText(it.v.sym, 14, 10);
+  g.font = `400 11px ${FM}`; g.fillStyle = P.ink2; g.fillText("Z = " + p.Z + " · оболочки " + sh.join("·"), 14, 14 + R * .2);
+  g.textBaseline = "bottom"; g.fillText("ядро на рисунке увеличено: в реальности оно в ~100 000 раз меньше атома", 14, h - 10);
+}
+async function show3D(it) {
+  const st = $("mStatus"); st.hidden = false; st.textContent = "Загружаю 3D-модель…";
+  const tools = $("mTools"); tools.innerHTML = ""; tools.hidden = true;
+  let $3D; try { $3D = await load3Dmol(); } catch (e) { st.textContent = "Не удалось загрузить библиотеку 3D-моделей. Проверьте подключение к интернету."; return; }
+  if (mediaMode !== "3d" || IT[Math.round(t)] !== it && panelItem !== it.i) return;
+  if (!viewer) { viewer = $3D.createViewer($("v3d"), { backgroundColor: "white", backgroundAlpha: 0, antialias: true }); }
+  viewer.clear(); viewer.setBackgroundColor(parseInt(P.bg.slice(1), 16), 1);
+  let txt, fmt;
+  if (it.m) { txt = toSDF(it); fmt = "sdf"; }
+  else {
+    try { const r = await fetch(it.pdb); if (!r.ok) throw 0; txt = await r.text(); fmt = "pdb"; } catch (e) { st.textContent = "Не удалось загрузить структуру " + it.pdbid + "."; return; }
+    if (mediaMode !== "3d" || panelItem !== it.i) return;
+  }
+  viewer.addModel(txt, fmt);
+  const styles = it.m ? [["ball", "Шарики и палочки"], ["stick", "Палочки"], ["sphere", "Объём атомов"]] : [["cartoon", "Ленты"], ["chain", "По цепям"], ["atoms", "Атомы"]];
+  if (!styleKey || !styles.some(s => s[0] === styleKey)) styleKey = styles[0][0];
+  const apply = () => { setStyle3D(it, styleKey); [...tools.querySelectorAll("button[data-s]")].forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === styleKey))); };
+  styles.forEach(([k, l]) => { const b = el("button", { text: l, "aria-pressed": "false" }); b.dataset.s = k; b.onclick = () => { styleKey = k; apply(); }; tools.append(b); });
+  const sp = el("button", { text: "Вращение", "aria-pressed": String(spinOn) }); sp.onclick = () => { spinOn = !spinOn; sp.setAttribute("aria-pressed", String(spinOn)); viewer.spin(spinOn ? "y" : false, .6); }; tools.append(sp);
+  tools.append(el("span", { class: "note", text: "тяните, чтобы вращать" }));
+  tools.hidden = false;
+  viewer.resize(); apply(); viewer.zoomTo(); viewer.zoom(.9); viewer.render();
+  requestAnimationFrame(() => { if (mediaMode === "3d" && panelItem === it.i) { viewer.resize(); viewer.zoomTo(); viewer.zoom(.9); viewer.render(); } });
+  if (spinOn) viewer.spin("y", .6);
+  st.hidden = true;
+  if (it.m) { const lg = $("mLegend"); lg.innerHTML = ""; [...new Set(it.m.e)].forEach(e => { const s = el("span"); const i = el("i"); i.style.background = EL[e] || "#888"; s.append(i, e); lg.append(s); }); lg.hidden = false; }
+}
+function setStyle3D(it, k) {
+  viewer.setStyle({}, {});
+  if (it.m) {
+    if (k === "ball") viewer.setStyle({}, { stick: { radius: .14, colorscheme: "Jmol" }, sphere: { scale: .26, colorscheme: "Jmol" } });
+    else if (k === "stick") viewer.setStyle({}, { stick: { radius: .22, colorscheme: "Jmol" } });
+    else viewer.setStyle({}, { sphere: { scale: 1, colorscheme: "Jmol" } });
+  } else {
+    if (k === "cartoon") viewer.setStyle({}, { cartoon: { color: "spectrum", thickness: .5 } });
+    else if (k === "chain") viewer.setStyle({}, { cartoon: { colorscheme: "chain" } });
+    else viewer.setStyle({}, it.pdbbb ? { sphere: { scale: .9, colorscheme: "chain" } } : { stick: { radius: .16, colorscheme: "Jmol" }, sphere: { scale: .22, colorscheme: "Jmol" } });
+    viewer.setStyle({ hetflag: true }, { stick: { radius: .2, colorscheme: "greenCarbon" } });
+    viewer.setStyle({ resn: ["DA", "DT", "DG", "DC", "A", "U", "G", "C"] }, k === "atoms" ? { stick: { radius: .16, colorscheme: "Jmol" } } : { cartoon: { colorscheme: "nucleic" }, stick: { radius: .12, colorscheme: "nucleic" } });
+  }
+  viewer.render();
+}
+function toSDF(it) {
+  const M = it.M, n = M.e.length, L = [it.n, "  atlas", ""];
+  L.push(String(n).padStart(3) + String(M.b.length).padStart(3) + "  0  0  0  0  0  0  0  0999 V2000");
+  for (let i = 0; i < n; i++) L.push(M.X[3 * i].toFixed(4).padStart(10) + M.X[3 * i + 1].toFixed(4).padStart(10) + M.X[3 * i + 2].toFixed(4).padStart(10) + " " + M.e[i].padEnd(3) + " 0  0  0  0  0  0  0  0  0  0  0  0");
+  M.b.forEach(([a, b, o]) => L.push(String(a + 1).padStart(3) + String(b + 1).padStart(3) + String(o).padStart(3) + "  0  0  0  0"));
+  L.push("M  END", "$$$$"); return L.join("\n");
+}
+addEventListener("resize", () => { resize(); if (viewer && mediaMode === "3d") viewer.resize(); if (panelOpen && (mediaMode === "draw" || mediaMode === "bohr")) drawMedia(IT[panelItem], mediaMode); drawCmp(); });
+
+/* compare */
+let cmpPick = 1, cmpUser = false;
+(function buildCmpSelect() {
+  const sel = $("cmpSel");
+  CH.forEach((c, ci) => { const og = el("optgroup"); og.label = c.name; IT.filter(it => it.ci === ci).forEach(it => { const o = el("option", { value: String(it.i), text: it.n + " — " + fmtSize(sizeOf(it)) }); og.append(o); }); sel.append(og); });
+  sel.onchange = () => { cmpPick = +sel.value; cmpUser = true; drawCmp(); };
+})();
+function drawCmp() {
+  if (!panelOpen || panelItem < 0) return;
+  const a = IT[panelItem], b = IT[cmpPick] || IT[0], c = $("cmpCanvas"), r = c.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+  if (!r.width) return;
+  c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
+  const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height);
+  const pad = 18, base = r.height - 34, gap = Math.max(a.w, a.h, b.w, b.h) * .25;
+  const k = Math.min((base - pad) / Math.max(a.h, b.h), (r.width - pad * 2) / (a.w + b.w + gap));
+  let x = (r.width - (a.w + b.w + gap) * k) / 2;
+  g.strokeStyle = A(P.ground, .5); g.beginPath(); g.moveTo(8, base + .5); g.lineTo(r.width - 8, base + .5); g.stroke();
+  g.textAlign = "center"; g.textBaseline = "top";
+  for (const it of [a, b]) {
+    const W = it.w * k, H = it.h * k, cx = x + W / 2;
+    if (Math.max(W, H) >= 2) { g.save(); g.translate(cx, base - H / 2); VIEW.cx = cx; VIEW.w = r.width; (D[it.v.t] || D.blobFallback)(g, it, W, H, rng(it.seed), 0, false); g.restore(); }
+    else { g.fillStyle = P.glow; circ(g, cx, base - 3, 2.5); g.fill(); g.strokeStyle = P.glow; g.beginPath(); g.moveTo(cx, base - 10); g.lineTo(cx, base - 38); g.stroke(); }
+    g.font = `600 12px ${FB}`; g.fillStyle = P.ink; g.fillText(it.n.length > 26 ? it.n.slice(0, 25) + "…" : it.n, Math.max(60, Math.min(r.width - 60, cx)), base + 6);
+    g.font = `400 11px ${FM}`; g.fillStyle = P.ink2; g.fillText(fmtSize(sizeOf(it)), Math.max(60, Math.min(r.width - 60, cx)), base + 20);
+    x += W + gap * k;
+  }
+  const sa = sizeOf(a), sb = sizeOf(b), big = sa >= sb ? a : b, sm = sa >= sb ? b : a, ratio = Math.max(sa, sb) / Math.min(sa, sb);
+  $("cmpText").textContent = ratio < 1.05 ? `${a.n} и ${b.n.toLowerCase()} почти одного размера.` : `${big.n} больше, чем ${sm.n.toLowerCase()}, в ${fmtRatio(ratio)} раз.` + (ratio > 400 ? " Меньший объект на рисунке — точка." : "");
+}
+
+/* ───────── catalog ───────── */
+let catOpen = false, catChap = -1, thumbObs = null;
+const thumbs = new Map();
+function openCatalog() { catOpen = true; $("catalog").classList.add("open"); buildCatalog(); setTimeout(() => $("catQ").focus(), 50); stopTour(); }
+function closeCatalog() { catOpen = false; $("catalog").classList.remove("open"); cv.focus?.(); }
+$("btnCat").onclick = openCatalog; $("catClose").onclick = closeCatalog;
+(function chips() {
+  const box = $("catChips");
+  const mk = (ci, label) => { const b = el("button", { "aria-pressed": String(ci === catChap) }); if (ci >= 0) { const i = el("i"); b.append(i); } b.append(label); b.dataset.ci = ci; b.onclick = () => { catChap = ci; [...box.children].forEach(x => x.setAttribute("aria-pressed", String(+x.dataset.ci === catChap))); buildCatalog(); }; box.append(b); };
+  mk(-1, "Все"); CH.forEach((c, ci) => mk(ci, c.name));
+})();
+function paintChips() { [...$("catChips").children].forEach(b => { const ci = +b.dataset.ci; if (ci >= 0) b.style.setProperty("--chap", chapColor(ci)); }); }
+$("catQ").addEventListener("input", () => buildCatalog());
+function buildCatalog() {
+  const q = $("catQ").value.trim().toLowerCase(), body = $("catBody"); body.innerHTML = ""; thumbs.clear();
+  if (thumbObs) thumbObs.disconnect();
+  thumbObs = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { drawThumb(e.target); thumbObs.unobserve(e.target); } }), { root: body, rootMargin: "200px" });
+  let count = 0;
+  CH.forEach((c, ci) => {
+    if (catChap >= 0 && ci !== catChap) return;
+    const list = IT.filter(it => it.ci === ci && (!q || (it.n + " " + it.en + " " + it.d).toLowerCase().includes(q)));
+    if (!list.length) return; count += list.length;
+    const grp = el("div", { class: "cat-group" }); grp.style.setProperty("--chap", chapColor(ci));
+    const h = el("h3"); h.append(el("i"), c.name); grp.append(h);
+    const grid = el("div", { class: "cat-grid" });
+    list.forEach(it => { const cvs = el("canvas", { width: "104", height: "104", "aria-hidden": "true" }); cvs.dataset.i = it.i; const card = el("button", { class: "card" }, cvs, el("span", {}, el("b", { text: it.n }), el("small", { text: fmtSize(sizeOf(it)) }))); card.onclick = () => { closeCatalog(); userInput(); goTo(it.i); }; grid.append(card); thumbObs.observe(cvs); thumbs.set(cvs, it.i); });
+    grp.append(grid); body.append(grp);
+  });
+  $("catCount").textContent = count + " из " + N;
+  if (!count) body.append(el("p", { class: "cat-empty", text: "Ничего не нашлось. Попробуйте другое слово — например, «клетка» или «вирус»." }));
+}
+function drawThumb(c) {
+  const it = IT[+c.dataset.i], g = c.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, 104, 104);
+  const ar = it.w / it.h; let W = 88, H = W / ar; if (H > 88) { H = 88; W = H * ar; }
+  g.save(); g.translate(52, 52); VIEW.cx = 52; VIEW.w = 104; (D[it.v.t] || D.blobFallback)(g, it, W, H, rng(it.seed), 0, false); g.restore();
+  c.dataset.drawn = "1";
+}
+function refreshThumbs(src) { if (!catOpen) return; thumbs.forEach((i, c) => { const it = IT[i]; if (c.dataset.drawn && ((it.pi && it.pi.src === src) || (it.sil && it.sil.src === src))) drawThumb(c); }); }
+function refreshAllThumbs() { if (catOpen) buildCatalog(); paintChips(); }
+
+/* ───────── boot ───────── */
+function start(data) {
+  try { const m = localStorage.getItem("atlas-mode"); if (m === "dark" || m === "light") document.documentElement.setAttribute("data-theme", m); } catch (e) { }
+  readPalette(); paintTrack(); paintChips(); applyModeLabel();
+  resize();
+  let s = 0; const h = (location.hash || "").slice(1); const hi = IT.findIndex(it => it.id === h); if (hi >= 0) s = hi;
+  if (data && typeof data.t === "number") s = data.t;
+  t = target = s; lastFocus = -1;
+  requestAnimationFrame(frame);
+  document.fonts && document.fonts.ready.then(() => { dirty = true; });
+  addEventListener("hashchange", () => { const i = IT.findIndex(it => it.id === location.hash.slice(1)); if (i >= 0 && i !== Math.round(target)) goTo(i); });
+  setTimeout(() => { if (!hintGone) hideHint(); }, 9000);
+}
+window.claude?.hot?.snapshot?.(() => ({ t: Math.round(target) }));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
